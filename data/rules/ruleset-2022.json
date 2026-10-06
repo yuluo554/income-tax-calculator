@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "year": 2022,
+  "notes": "2023 提标前标准：子女教育 1000、赡养老人独生 2000；婴幼儿照护 2022 年设立（溯及 2022-01-01，标准 1000，待核对）。税率表与 2026 相同（政策未变）。本文件与 ruleset-2026.json 共同演示年度版本化切换，M1 统一逐条挂原文核对。",
+  "sources": [
+    {"id": "S61", "doc": "国家税务总局公告2018年第61号《个人所得税扣缴申报管理办法（试行）》", "url": "", "status": "已核对", "note": "公式与减除费用口径已核对（题目阶段）"},
+    {"id": "SLAW", "doc": "中华人民共和国个人所得税法（2018修正）", "url": "", "status": "待核对", "note": "综合所得税率表原文待抓取核对"},
+    {"id": "S164", "doc": "财税〔2018〕164号", "url": "", "status": "待核对", "note": "按月换算税率表原文待抓取"},
+    {"id": "S42", "doc": "财政部 税务总局公告2021年第42号", "url": "", "status": "待核对", "note": "年终奖单独计税延续至2023-12-31（2022年度适用依据），原文待抓取"},
+    {"id": "S41", "doc": "国发〔2018〕41号《个人所得税专项附加扣除暂行办法》", "url": "", "status": "已核对", "note": "办法在案；条款数值待逐条挂原文"},
+    {"id": "S2023", "doc": "国务院2023-08提高个人所得税专项附加扣除标准通知", "url": "", "status": "待核对", "note": "提标通知载明原值（1000/1000/2000），反向印证 2019-2022 标准"},
+    {"id": "S22", "doc": "2022年增设3岁以下婴幼儿照护专项附加扣除的国务院通知", "url": "", "status": "待核对", "note": "文号与原文待核对"}
+  ],
+  "withholding": {
+    "monthly_standard_deduction": {
+      "value": 5000,
+      "ref": {"source": "S61", "clause": "第六条第（一）项", "text": "减除费用：5000元/月"},
+      "status": "已核对"
+    }
+  },
+  "rate_tables": {
+    "comprehensive_annual": [
+      {"lower": 0, "upper": 36000, "rate": "0.03", "quick_deduction": 0, "ref": {"source": "SLAW", "clause": "税率表一（综合所得适用）"}, "status": "待核对"},
+      {"lower": 36000, "upper": 144000, "rate": "0.10", "quick_deduction": 2520, "ref": {"source": "SLAW", "clause": "税率表一（综合所得适用）"}, "status": "待核对"},
+      {"lower": 144000, "upper": 300000, "rate": "0.20", "quick_deduction": 16920, "ref": {"source": "SLAW", "clause": "税率表一（综合所得适用）"}, "status": "待核对"},
+      {"lower": 300000, "upper": 420000, "rate": "0.25", "quick_deduction": 31920, "ref": {"source": "SLAW", "clause": "税率表一（综合所得适用）"}, "status": "待核对"},
+      {"lower": 420000, "upper": 660000, "rate": "0.30", "quick_deduction": 52920, "ref": {"source": "SLAW", "clause": "税率表一（综合所得适用）"}, "status": "待核对"},
+      {"lower": 660000, "upper": 960000, "rate": "0.35", "quick_deduction": 85920, "ref": {"source": "SLAW", "clause": "税率表一（综合所得适用）"}, "status": "待核对"},
+      {"lower": 960000, "upper": null, "rate": "0.45", "quick_deduction": 181920, "ref": {"source": "SLAW", "clause": "税率表一（综合所得适用）"}, "status": "待核对"}
+    ],
+    "monthly_converted": [
+      {"lower": 0, "upper": 3000, "rate": "0.03", "quick_deduction": 0, "ref": {"source": "S164", "clause": "附件1：按月换算后的综合所得税率表"}, "status": "待核对"},
+      {"lower": 3000, "upper": 12000, "rate": "0.10", "quick_deduction": 210, "ref": {"source": "S164", "clause": "附件1：按月换算后的综合所得税率表"}, "status": "待核对"},
+      {"lower": 12000, "upper": 25000, "rate": "0.20", "quick_deduction": 1410, "ref": {"source": "S164", "clause": "附件1：按月换算后的综合所得税率表"}, "status": "待核对"},
+      {"lower": 25000, "upper": 35000, "rate": "0.25", "quick_deduction": 2660, "ref": {"source": "S164", "clause": "附件1：按月换算后的综合所得税率表"}, "status": "待核对"},
+      {"lower": 35000, "upper": 55000, "rate": "0.30", "quick_deduction": 4410, "ref": {"source": "S164", "clause": "附件1：按月换算后的综合所得税率表"}, "status": "待核对"},
+      {"lower": 55000, "upper": 80000, "rate": "0.35", "quick_deduction": 7160, "ref": {"source": "S164", "clause": "附件1：按月换算后的综合所得税率表"}, "status": "待核对"},
+      {"lower": 80000, "upper": null, "rate": "0.45", "quick_deduction": 15160, "ref": {"source": "S164", "clause": "附件1：按月换算后的综合所得税率表"}, "status": "待核对"}
+    ]
+  },
+  "bonus": {
+    "separate_tax_policy": {
+      "value": "单独计税与并入综合所得可择优，2022年度单独计税依据为2021年第42号公告（延续至2023-12-31）",
+      "valid_from": "2019-01-01",
+      "valid_until": "2023-12-31",
+      "ref": {"source": "S42", "clause": "第一条"},
+      "status": "待核对"
+    },
+    "monthly_divisor": {
+      "value": 12,
+      "ref": {"source": "S164", "clause": "第一条（奖金除以12个月，按月换算后查表）"},
+      "status": "待核对"
+    }
+  },
+  "special_deductions": {
+    "housing_loan_vs_rent": "mutually_exclusive",
+    "child_education": {
+      "monthly_per_child": {"value": 1000, "ref": {"source": "S2023", "clause": "提标通知载明原值 1000→2000"}, "status": "已核对"},
+      "scope": {"desc": "学前教育至全日制学历教育，按每孩计算", "ref": {"source": "S41", "clause": "第五条"}, "status": "待核对"},
+      "split_mode": {"desc": "父母一方按100%或双方各按50%扣除", "ref": {"source": "S41", "clause": "第五条"}, "status": "待核对"}
+    },
+    "continue_education": {
+      "academic_monthly": {"value": 400, "ref": {"source": "S41", "clause": "第八条"}, "status": "待核对"},
+      "academic_max_months": {"value": 48, "ref": {"source": "S41", "clause": "第八条（同一学历扣除期不超过48个月）"}, "status": "待核对"},
+      "vocational_annual": {"value": 3600, "ref": {"source": "S41", "clause": "第九条（取得证书当年）"}, "status": "待核对"}
+    },
+    "serious_illness": {
+      "claimable_stage": {"desc": "仅年度汇算扣除，预扣环节不可扣", "ref": {"source": "S41", "clause": "第十一条"}, "status": "待核对"},
+      "deductible_threshold": {"value": 15000, "ref": {"source": "S41", "clause": "第十一条（医保目录内自付累计超15000元部分）"}, "status": "待核对"},
+      "annual_cap": {"value": 80000, "ref": {"source": "S41", "clause": "第十一条"}, "status": "待核对"}
+    },
+    "housing_loan": {
+      "monthly": {"value": 1000, "ref": {"source": "S41", "clause": "第十四条（首套住房贷款利息）"}, "status": "待核对"},
+      "max_months": {"value": 240, "ref": {"source": "S41", "clause": "第十四条"}, "status": "待核对"}
+    },
+    "housing_rent": {
+      "mutually_exclusive_with": {"desc": "住房贷款利息：同一年度内不得同时扣除", "ref": {"source": "S41", "clause": "第二十条"}, "status": "待核对"},
+      "tiers": [
+        {"tier": {"desc": "直辖市、省会（首府）城市、计划单列市及国务院确定的其他城市", "ref": {"source": "S41", "clause": "第十七条"}, "status": "待核对"}, "monthly": {"value": 1500, "ref": {"source": "S41", "clause": "第十七条"}, "status": "待核对"}},
+        {"tier": {"desc": "市辖区户籍人口超过100万的城市", "ref": {"source": "S41", "clause": "第十七条"}, "status": "待核对"}, "monthly": {"value": 1100, "ref": {"source": "S41", "clause": "第十七条"}, "status": "待核对"}},
+        {"tier": {"desc": "市辖区户籍人口不超过100万的城市", "ref": {"source": "S41", "clause": "第十七条"}, "status": "待核对"}, "monthly": {"value": 800, "ref": {"source": "S41", "clause": "第十七条"}, "status": "待核对"}}
+      ]
+    },
+    "support_elderly": {
+      "only_child_monthly": {"value": 2000, "ref": {"source": "S2023", "clause": "提标通知载明原值 2000→3000（独生子女定额）"}, "status": "已核对"},
+      "shared_total_cap": {"value": 2000, "ref": {"source": "S41", "clause": "非独生分摊总额上限（提标前）条款待挂原文"}, "status": "待核对"},
+      "shared_per_child_cap": {"value": 1000, "ref": {"source": "S41", "clause": "非独生每人分摊上限（提标前）条款待挂原文"}, "status": "待核对"}
+    },
+    "infant_care": {
+      "monthly_per_child": {"value": 1000, "ref": {"source": "S22", "clause": "2022年设立时标准，原文待挂"}, "status": "待核对"},
+      "split_mode": {"desc": "父母一方按100%或双方各按50%扣除", "ref": {"source": "S22", "clause": "待挂原文"}, "status": "待核对"}
+    }
+  }
+}
