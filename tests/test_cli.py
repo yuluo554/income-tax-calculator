@@ -109,6 +109,119 @@ def test_calc_settlement_explicit_override(tmp_path, capsys):
     assert "应补税额" in out  # 0 − 1480 = 应补 1480
 
 
+# ---------------------------------------------------------------------------
+# M3：专项附加申报清单 / 择优对比 / 临界区间提示
+# ---------------------------------------------------------------------------
+
+
+def test_calc_with_claims_renders_checklist_and_chains(tmp_path, capsys):
+    """申报清单渲染 + 预扣链逐月计入 + 汇算链聚合（子女教育 + 赡养老人独生）。"""
+    path = _write_input(
+        tmp_path,
+        {
+            "uniform_month": {"gross": "15000.00"},
+            "month_count": 12,
+            "special_additional_claims": [
+                {"item": "child_education", "children": 1, "share_ratio": "1.0"},
+                {"item": "support_elderly", "only_child": True},
+            ],
+        },
+    )
+    assert main(["calc", "--year", "2024", "--input", path]) == 0
+    out = capsys.readouterr().out
+    assert "专项附加扣除申报清单" in out
+    assert "子女教育" in out and "赡养老人" in out
+    assert "2000.00" in out and "3000.00" in out  # 逐项标准（2023 提标后）
+    assert "5000.00" in out  # 预扣链月合计
+    assert "3480.00" in out  # 汇算：180000−60000−60000=60000 → 10%−2520
+    assert "S2023" in out and "S41" in out  # 逐项依据
+
+
+def test_calc_claims_serious_illness_stays_out_of_withholding(tmp_path, capsys):
+    """大病医疗 settlement_only：预扣链不出现，汇算链计入。"""
+    path = _write_input(
+        tmp_path,
+        {
+            "uniform_month": {"gross": "0.00"},
+            "month_count": 1,
+            "special_additional_claims": [
+                {"item": "serious_illness", "self_paid_total": "30000.00"}
+            ],
+        },
+    )
+    assert main(["calc", "--year", "2024", "--input", path]) == 0
+    out = capsys.readouterr().out
+    assert "大病医疗" in out
+    assert "仅年度汇算扣除" in out
+    assert "15000.00" in out  # 30000 − 15000 起付
+
+
+def test_calc_claims_violation_is_usage_error(tmp_path, capsys):
+    """房贷+租金互斥 → 整单拒绝，退出码 2 并列出依据条款。"""
+    path = _write_input(
+        tmp_path,
+        {
+            "uniform_month": {"gross": "10000.00"},
+            "month_count": 1,
+            "special_additional_claims": [
+                {"item": "housing_loan"},
+                {"item": "housing_rent", "tier": 0},
+            ],
+        },
+    )
+    assert main(["calc", "--year", "2024", "--input", path]) == 2
+    err = capsys.readouterr().err
+    assert "不得同时申报" in err and "第二十条" in err
+
+
+def test_calc_claims_unknown_field_is_usage_error(tmp_path, capsys):
+    path = _write_input(
+        tmp_path,
+        {
+            "uniform_month": {"gross": "0.00"},
+            "month_count": 1,
+            "special_additional_claims": [{"item": "child_education", "chld": 1}],
+        },
+    )
+    assert main(["calc", "--year", "2024", "--input", path]) == 2
+    assert "不认识的字段" in capsys.readouterr().err
+
+
+def test_calc_bonus_comparison_recommends_and_warns_trap(tmp_path, capsys):
+    """择优对比输出（两方案税额+差额+推荐）+ 临界区间标红提示。"""
+    path = _write_input(
+        tmp_path,
+        {
+            "uniform_month": {"gross": "8000.00"},
+            "month_count": 12,
+            "bonus_income": "36001.00",
+        },
+    )
+    assert main(["calc", "--year", "2024", "--input", path]) == 0
+    out = capsys.readouterr().out
+    assert "择优对比" in out
+    assert "方案A 单独计税" in out and "方案B 并入综合所得" in out
+    assert "推荐方案A" in out  # A=4470.10 < B=4680.10，差额 −210.00
+    assert "38566.67" in out  # 临界区间右端（推导复现）
+    assert "[!!]" in out and "多发一元" in out  # 36001 落入陷阱区间
+
+
+def test_calc_bonus_at_boundary_no_trap_warning(tmp_path, capsys):
+    """奖金恰在区间左端（级距边界）不属于陷阱开区间：无 [!!] 陷阱提示。"""
+    path = _write_input(
+        tmp_path,
+        {
+            "uniform_month": {"gross": "0.00"},
+            "month_count": 1,
+            "bonus_income": "36000.00",
+        },
+    )
+    assert main(["calc", "--year", "2024", "--input", path]) == 0
+    out = capsys.readouterr().out
+    assert "临界区间" in out  # 推导区间仍列出
+    assert "多发一元" not in out  # 但 36000 不落入开区间
+
+
 def test_calc_malformed_json_is_usage_error(tmp_path, capsys):
     path = tmp_path / "bad.json"
     path.write_text("{not json", encoding="utf-8")

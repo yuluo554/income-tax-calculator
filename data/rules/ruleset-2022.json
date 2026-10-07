@@ -321,6 +321,7 @@
     "serious_illness": {
       "claimable_stage": {
         "desc": "仅年度汇算清缴时扣除，预扣环节不可扣",
+        "stage": "settlement_only",
         "ref": {
           "source": "S41",
           "clause": "第十一条（办理年度汇算清缴时据实扣除）"

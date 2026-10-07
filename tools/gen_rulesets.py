@@ -252,6 +252,9 @@ def build_ruleset(year: int) -> dict:
         "serious_illness": {
             "claimable_stage": {
                 "desc": "仅年度汇算清缴时扣除，预扣环节不可扣",
+                # 机器可读阶段标记（plan/04 §一 schema 定稿）：引擎按此把大病医疗
+                # 从预扣链剔除、仅纳入汇算链（M3 deductions.py 消费）
+                "stage": "settlement_only",
                 "ref": {"source": "S41", "clause": "第十一条（办理年度汇算清缴时据实扣除）"},
                 "status": VERIFIED,
             },

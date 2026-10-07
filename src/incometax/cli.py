@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from incometax import __version__
 from incometax.engine import bonus as bonus_engine
+from incometax.engine import deductions as deductions_engine
 from incometax.engine import monthly as monthly_engine
 from incometax.engine import settlement as settlement_engine
 from incometax.engine import social as social_engine
@@ -56,7 +57,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_rules.add_argument("--year", type=int, required=True, help="规则包年度（需已有对应规则包文件）")
     p_rules.set_defaults(func=cmd_rules)
 
-    p_calc = sub.add_parser("calc", help="计算：累计预扣逐月表 + 社保联动 + 年度汇算 + 年终奖单独计税")
+    p_calc = sub.add_parser(
+        "calc",
+        help="计算：累计预扣逐月表 + 社保联动 + 专项附加扣除 + 年度汇算 + 年终奖择优与临界区间",
+    )
     p_calc.add_argument("--year", type=int, required=True, help="适用纳税年度（需已有对应规则包文件）")
     p_calc.add_argument(
         "--input",
@@ -126,6 +130,7 @@ class CalcInput:
     social_params: Optional[Tuple[Any, Any, Any, Any]] = None  # (base_input, rates, lower, upper)
     bonus_income: Optional[Decimal] = None
     settlement_overrides: Dict[str, Decimal] = field(default_factory=dict)
+    claims: List[deductions_engine.Claim] = field(default_factory=list)  # 七项专项附加申报
 
 
 def _user_decimal(node: Dict[str, Any], key: str, where: str) -> Decimal:
@@ -234,6 +239,85 @@ def _parse_calc_settlement(raw: Dict[str, Any]) -> Dict[str, Decimal]:
     return overrides
 
 
+CLAIM_FIELDS = (
+    "item",
+    "children",
+    "share_ratio",
+    "kind",
+    "months",
+    "tier",
+    "only_child",
+    "monthly_amount",
+    "other_shared_amounts",
+    "self_paid_total",
+    "note",
+)
+CLAIM_DECIMAL_FIELDS = ("children", "share_ratio", "monthly_amount", "self_paid_total")
+
+
+def _parse_calc_claims(raw: Dict[str, Any]) -> List[deductions_engine.Claim]:
+    """专项附加扣除申报清单（七项；字段按项目取用，非法组合由引擎校验拒绝）。"""
+    if raw.get("special_additional_claims") is None:
+        return []
+    nodes = raw["special_additional_claims"]
+    if not isinstance(nodes, list):
+        raise CliUsageError("special_additional_claims: 必须为数组")
+    claims: List[deductions_engine.Claim] = []
+    for i, node in enumerate(nodes):
+        where = f"special_additional_claims[{i}]"
+        if not isinstance(node, dict):
+            raise CliUsageError(f"{where}: 必须为对象")
+        _check_unknown_keys(node, CLAIM_FIELDS, where)
+        item = node.get("item")
+        if not isinstance(item, str) or not item:
+            raise CliUsageError(f"{where}: 缺少 item（扣除项目键，如 child_education）")
+        kwargs: Dict[str, Any] = {"item": item}
+        for key in CLAIM_DECIMAL_FIELDS:
+            value = _optional_decimal(node, key, where)
+            if value is not None:
+                kwargs[key] = value
+        kind = node.get("kind")
+        if kind is not None:
+            if not isinstance(kind, str):
+                raise CliUsageError(f"{where}.kind: 必须为字符串（academic/vocational）")
+            kwargs["kind"] = kind
+        months = node.get("months")
+        if months is not None:
+            if not isinstance(months, int) or isinstance(months, bool) or not (
+                1 <= months <= MONTHS_PER_YEAR
+            ):
+                raise CliUsageError(f"{where}.months: 必须为 1-{MONTHS_PER_YEAR} 的整数")
+            kwargs["months"] = months
+        tier = node.get("tier")
+        if tier is not None:
+            if not isinstance(tier, int) or isinstance(tier, bool) or tier < 0:
+                raise CliUsageError(f"{where}.tier: 必须为非负整数（住房租金城市档下标）")
+            kwargs["tier"] = tier
+        only_child = node.get("only_child")
+        if only_child is not None:
+            if not isinstance(only_child, bool):
+                raise CliUsageError(f"{where}.only_child: 必须为布尔值")
+            kwargs["only_child"] = only_child
+        others = node.get("other_shared_amounts")
+        if others is not None:
+            if not isinstance(others, list):
+                raise CliUsageError(f"{where}.other_shared_amounts: 必须为数组")
+            parsed_others = []
+            for j, value in enumerate(others):
+                try:
+                    parsed_others.append(to_decimal(value, f"{where}.other_shared_amounts[{j}]"))
+                except Exception as exc:
+                    raise CliUsageError(f"{where}.other_shared_amounts[{j}]: {exc}")
+            kwargs["other_shared_amounts"] = tuple(parsed_others)
+        note = node.get("note")
+        if note is not None:
+            if not isinstance(note, str):
+                raise CliUsageError(f"{where}.note: 必须为字符串")
+            kwargs["note"] = note
+        claims.append(deductions_engine.Claim(**kwargs))
+    return claims
+
+
 def _read_calc_input(path_str: str) -> Dict[str, Any]:
     path = Path(path_str)
     try:
@@ -247,7 +331,11 @@ def _read_calc_input(path_str: str) -> Dict[str, Any]:
         raise CliUsageError(f"输入文件不是合法 JSON：{path}（{exc}）")
     if not isinstance(raw, dict):
         raise CliUsageError("calc 输入文件顶层必须是 JSON 对象")
-    _check_unknown_keys(raw, ("months", "uniform_month", "month_count", "social", "bonus_income", "settlement"), "calc 输入")
+    _check_unknown_keys(
+        raw,
+        ("months", "uniform_month", "month_count", "social", "bonus_income", "settlement", "special_additional_claims"),
+        "calc 输入",
+    )
     return raw
 
 
@@ -261,11 +349,13 @@ def _parse_calc_input(raw: Dict[str, Any]) -> CalcInput:
         except Exception as exc:
             raise CliUsageError(f"bonus_income: {exc}")
     settlement_overrides = _parse_calc_settlement(raw)
+    claims = _parse_calc_claims(raw)
     return CalcInput(
         months=months,
         social_params=social_params,
         bonus_income=bonus_income,
         settlement_overrides=settlement_overrides,
+        claims=claims,
     )
 
 
@@ -360,7 +450,42 @@ def _render_settlement(ruleset, report: settlement_engine.SettlementReport) -> N
     print(f"  减除费用依据：{render_ref(report.standard_deduction_ref, ruleset.data['sources'])}")
 
 
-def _render_bonus(ruleset, report: bonus_engine.BonusSeparateTaxResult) -> None:
+CLAIM_LABELS = {
+    "child_education": "子女教育",
+    "infant_care": "3岁以下婴幼儿照护",
+    "continue_education": "继续教育",
+    "serious_illness": "大病医疗",
+    "housing_loan": "住房贷款利息",
+    "housing_rent": "住房租金",
+    "support_elderly": "赡养老人",
+}
+
+
+def _render_deductions(ruleset, report: deductions_engine.DeductionsReport) -> None:
+    print("== 专项附加扣除申报清单（41号办法/增设与提标通知，逐项挂依据） ==")
+    for cr in report.claims:
+        label = CLAIM_LABELS.get(cr.item, cr.item)
+        print(f"  {label}：{cr.detail}")
+        if cr.stage == deductions_engine.STAGE_SETTLEMENT_ONLY:
+            print(f"    年额 {_fmt(cr.annual_amount)}（仅年度汇算扣除，预扣链不计）[{short_ref(cr.standard_ref)}]")
+        else:
+            print(
+                f"    月额 {_fmt(cr.monthly_amount)} × {cr.months_claimed} 月 = 年额 {_fmt(cr.annual_amount)}"
+                f"（预扣+汇算）[{short_ref(cr.standard_ref)}]"
+            )
+        if cr.note:
+            print(f"    [注] {cr.note}")
+    print(f"  预扣链月合计（已逐月计入下方累计预扣表）：{_fmt(report.monthly_total)}")
+    print(f"  汇算链年合计（含仅汇算项 {_fmt(report.settlement_only_annual_total)}）：{_fmt(report.annual_total)}")
+
+
+def _render_bonus(
+    ruleset,
+    report: bonus_engine.BonusSeparateTaxResult,
+    comparison: Optional[bonus_engine.BonusComparisonReport],
+    trap_intervals: Optional[List[bonus_engine.BonusTrapInterval]],
+    active_trap: Optional[bonus_engine.BonusTrapInterval],
+) -> None:
     print("== 全年一次性奖金（单独计税，164号第一条（一）） ==")
     print(f"  奖金：{_fmt(report.bonus_amount)} ÷ {report.divisor:f} = {_fmt(report.quotient)}（商数定档，税基用全额）")
     if report.bracket_index is not None:
@@ -373,7 +498,38 @@ def _render_bonus(ruleset, report: bonus_engine.BonusSeparateTaxResult) -> None:
     print(f"  应纳税额：{_fmt(report.bonus_amount)} × {_pct(report.rate)} − {_fmt(report.quick_deduction)} = {_fmt(report.tax)}")
     print(f"  税后奖金：{_fmt(report.after_tax)}")
     print(f"  政策：{report.policy_note}")
-    print("  [注] 择优对比（并入综合所得）与临界区间提示在 M3 实装")
+    if trap_intervals:
+        text = "；".join(f"({_fmt(iv.lower)}, {_fmt(iv.upper)})" for iv in trap_intervals)
+        print(f"  临界区间（由按月换算表逐边界推导，共 {len(trap_intervals)} 个）：{text}")
+    if active_trap is not None:
+        lo, hi = _fmt(active_trap.lower), _fmt(active_trap.upper)
+        print(
+            f"  [!!] 奖金落入\"多发一元、到手变少\"临界区间（{lo}, {hi}）：区间内税后奖金"
+            f"低于 {lo} 处对应的税后金额（税率表级距机制客观呈现，非避税建议）"
+        )
+    if comparison is not None:
+        print("== 年终奖择优对比（全年总税负口径） ==")
+        a, b = comparison.scheme_separate, comparison.scheme_combined
+        salary_tax = a.annual_total_tax - report.tax
+        print(
+            f"  {a.label}：工资汇算 {_fmt(salary_tax)} + 奖金单独计税 {_fmt(report.tax)}"
+            f" = 全年总税负 {_fmt(a.annual_total_tax)}"
+        )
+        b_line = f"  {b.label}：并入后应纳税所得额 {_fmt(b.taxable_income)}"
+        if b.bracket_index is not None:
+            row = ruleset.data["rate_tables"]["comprehensive_annual"][b.bracket_index]
+            b_line += f" → 第 {b.bracket_index + 1} 级 {_pct(b.rate)}（速算扣除数 {_fmt(b.quick_deduction)}）"
+        b_line += f" → 全年应纳税额 {_fmt(b.annual_total_tax)}"
+        print(b_line)
+        diff = comparison.tax_difference
+        if comparison.tie:
+            print(f"  差额（A−B）：{_fmt(diff)} → 两案等同（差不超过申报精度 0.01 元），可任选")
+        elif comparison.recommended == bonus_engine.SCHEME_SEPARATE:
+            print(f"  差额（A−B）：{_fmt(diff)} → 推荐方案A：单独计税全年少缴 {_fmt(-diff)}")
+        else:
+            print(f"  差额（A−B）：{_fmt(diff)} → 推荐方案B：并入综合全年少缴 {_fmt(diff)}")
+        if not a.available:
+            print(f"  [!!] {a.note}")
 
 
 def cmd_calc(args) -> int:
@@ -404,6 +560,33 @@ def cmd_calc(args) -> int:
                 for mi in months
             ]
 
+        # 七项专项附加申报：先校验（违规整单拒绝 → 用法错误），再按 stage 分链
+        deductions_report = None
+        if calc_input.claims:
+            try:
+                deductions_report = deductions_engine.evaluate_claims(effective, calc_input.claims)
+            except deductions_engine.DeductionViolationError as exc:
+                raise CliUsageError(f"专项附加扣除申报校验未通过：{exc}")
+            affected_months = set()
+            for cr in deductions_report.claims:
+                if cr.monthly_amount <= 0:
+                    continue  # settlement_only / 年度定额项不进预扣链
+                for m in range(min(cr.months_claimed, len(months))):
+                    mi = months[m]
+                    months[m] = replace(
+                        mi,
+                        special_additional_deduction=mi.special_additional_deduction + cr.monthly_amount,
+                    )
+                    affected_months.add(m)
+            for m in affected_months:
+                mi = months[m]
+                months[m] = replace(
+                    mi,
+                    note="；".join(
+                        filter(None, [mi.note, "含专项附加扣除申报计入（清单见上方申报清单）"])
+                    ),
+                )
+
         monthly_report = monthly_engine.compute_monthly_withholding(effective, months)
 
         aggregates = {
@@ -415,24 +598,38 @@ def cmd_calc(args) -> int:
             "annual_other_deduction": sum((mi.other_deduction for mi in months), Decimal(0)),
             "withheld_total": monthly_report.withheld_total,
         }
+        if deductions_report is not None:
+            # settlement_only 项（大病医疗等）不在预扣链月度输入里，汇算链单独纳入
+            aggregates["annual_special_additional_deduction"] += (
+                deductions_report.settlement_only_annual_total
+            )
         aggregates.update(calc_input.settlement_overrides)
         settlement_report = settlement_engine.compute_annual_settlement(
             effective, settlement_engine.SettlementInput(**aggregates)
         )
 
-        bonus_report = None
+        bonus_report = bonus_comparison = None
+        trap_intervals: Optional[List[bonus_engine.BonusTrapInterval]] = None
+        active_trap = None
         if calc_input.bonus_income is not None:
             bonus_report = bonus_engine.compute_bonus_separate_tax(effective, calc_input.bonus_income)
+            bonus_comparison = bonus_engine.compare_bonus_schemes(
+                effective, calc_input.bonus_income, settlement_report
+            )
+            trap_intervals = bonus_engine.derive_bonus_trap_intervals(effective)
+            active_trap = bonus_engine.find_trap_interval(trap_intervals, calc_input.bonus_income)
     except ValueError as exc:
         raise RuntimeFailure(f"计算失败：{exc}")
 
     print(f"个人所得税联动计算 —— {ruleset.year} 纳税年度")
     if social_report is not None:
         _render_social(social_report)
+    if deductions_report is not None:
+        _render_deductions(ruleset, deductions_report)
     _render_monthly(ruleset, monthly_report)
     _render_settlement(ruleset, settlement_report)
     if bonus_report is not None:
-        _render_bonus(ruleset, bonus_report)
+        _render_bonus(ruleset, bonus_report, bonus_comparison, trap_intervals, active_trap)
     _print_legend(ruleset)
     print("免责声明：计算结果供参考，以税务机关核定为准；政策以发文机关正式文本为准。")
     return EXIT_OK
