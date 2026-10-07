@@ -1,0 +1,452 @@
+{
+  "schema_version": 1,
+  "year": 2019,
+  "notes": "首年口径：新个税法、61号公告扣缴办法、41号办法（六项专项附加扣除）自2019-01-01施行；年终奖单独计税按164号执行至2021-12-31。",
+  "sources": [
+    {
+      "id": "S61",
+      "doc": "国家税务总局公告2018年第61号《个人所得税扣缴申报管理办法（试行）》",
+      "url": "https://fgk.chinatax.gov.cn/zcfgk/c100012/c5194838/content.html",
+      "status": "已核对",
+      "note": "累计预扣法公式、减除费用 5000 元/月、附件预扣率表一（速算扣除数）均已逐字核对"
+    },
+    {
+      "id": "SLAW",
+      "doc": "中华人民共和国个人所得税法（2018年修正，2018-08-31）",
+      "url": "https://fgk.chinatax.gov.cn/zcfgk/c100009/c5193028/content.html",
+      "status": "已核对",
+      "note": "税率表一（综合所得适用）级距与税率按官方原文图逐字核对"
+    },
+    {
+      "id": "S164",
+      "doc": "财税〔2018〕164号《关于个人所得税法修改后有关优惠政策衔接问题的通知》",
+      "url": "https://www.gov.cn/zhengce/zhengceku/2018-12/31/content_5440172.htm",
+      "status": "已核对",
+      "note": "第一条（一）年终奖除以12查月度税率表；附件1按月换算后的综合所得税率表已逐字核对"
+    },
+    {
+      "id": "S41",
+      "doc": "国发〔2018〕41号《个人所得税专项附加扣除暂行办法》",
+      "url": "https://www.gov.cn/zhengce/zhengceku/2018-12/22/content_5351181.htm",
+      "status": "已核对",
+      "note": "七项扣除分档/互斥/分摊条款逐字核对；自2019-01-01施行（第三十二条）"
+    }
+  ],
+  "withholding": {
+    "monthly_standard_deduction": {
+      "value": 5000,
+      "ref": {
+        "source": "S61",
+        "clause": "第六条（累计减除费用按照5000元/月乘以当年截至本月任职受雇月份数计算）"
+      },
+      "status": "已核对"
+    }
+  },
+  "rate_tables": {
+    "comprehensive_annual": [
+      {
+        "lower": 0,
+        "upper": 36000,
+        "rate": "0.03",
+        "quick_deduction": 0,
+        "ref": {
+          "source": "SLAW",
+          "clause": "税率表一（综合所得适用）"
+        },
+        "ref_qd": {
+          "source": "S61",
+          "clause": "附件：个人所得税预扣率表一（居民个人工资、薪金所得预扣预缴适用）"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 36000,
+        "upper": 144000,
+        "rate": "0.10",
+        "quick_deduction": 2520,
+        "ref": {
+          "source": "SLAW",
+          "clause": "税率表一（综合所得适用）"
+        },
+        "ref_qd": {
+          "source": "S61",
+          "clause": "附件：个人所得税预扣率表一（居民个人工资、薪金所得预扣预缴适用）"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 144000,
+        "upper": 300000,
+        "rate": "0.20",
+        "quick_deduction": 16920,
+        "ref": {
+          "source": "SLAW",
+          "clause": "税率表一（综合所得适用）"
+        },
+        "ref_qd": {
+          "source": "S61",
+          "clause": "附件：个人所得税预扣率表一（居民个人工资、薪金所得预扣预缴适用）"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 300000,
+        "upper": 420000,
+        "rate": "0.25",
+        "quick_deduction": 31920,
+        "ref": {
+          "source": "SLAW",
+          "clause": "税率表一（综合所得适用）"
+        },
+        "ref_qd": {
+          "source": "S61",
+          "clause": "附件：个人所得税预扣率表一（居民个人工资、薪金所得预扣预缴适用）"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 420000,
+        "upper": 660000,
+        "rate": "0.30",
+        "quick_deduction": 52920,
+        "ref": {
+          "source": "SLAW",
+          "clause": "税率表一（综合所得适用）"
+        },
+        "ref_qd": {
+          "source": "S61",
+          "clause": "附件：个人所得税预扣率表一（居民个人工资、薪金所得预扣预缴适用）"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 660000,
+        "upper": 960000,
+        "rate": "0.35",
+        "quick_deduction": 85920,
+        "ref": {
+          "source": "SLAW",
+          "clause": "税率表一（综合所得适用）"
+        },
+        "ref_qd": {
+          "source": "S61",
+          "clause": "附件：个人所得税预扣率表一（居民个人工资、薪金所得预扣预缴适用）"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 960000,
+        "upper": null,
+        "rate": "0.45",
+        "quick_deduction": 181920,
+        "ref": {
+          "source": "SLAW",
+          "clause": "税率表一（综合所得适用）"
+        },
+        "ref_qd": {
+          "source": "S61",
+          "clause": "附件：个人所得税预扣率表一（居民个人工资、薪金所得预扣预缴适用）"
+        },
+        "status": "已核对"
+      }
+    ],
+    "monthly_converted": [
+      {
+        "lower": 0,
+        "upper": 3000,
+        "rate": "0.03",
+        "quick_deduction": 0,
+        "ref": {
+          "source": "S164",
+          "clause": "附件1：按月换算后的综合所得税率表"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 3000,
+        "upper": 12000,
+        "rate": "0.10",
+        "quick_deduction": 210,
+        "ref": {
+          "source": "S164",
+          "clause": "附件1：按月换算后的综合所得税率表"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 12000,
+        "upper": 25000,
+        "rate": "0.20",
+        "quick_deduction": 1410,
+        "ref": {
+          "source": "S164",
+          "clause": "附件1：按月换算后的综合所得税率表"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 25000,
+        "upper": 35000,
+        "rate": "0.25",
+        "quick_deduction": 2660,
+        "ref": {
+          "source": "S164",
+          "clause": "附件1：按月换算后的综合所得税率表"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 35000,
+        "upper": 55000,
+        "rate": "0.30",
+        "quick_deduction": 4410,
+        "ref": {
+          "source": "S164",
+          "clause": "附件1：按月换算后的综合所得税率表"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 55000,
+        "upper": 80000,
+        "rate": "0.35",
+        "quick_deduction": 7160,
+        "ref": {
+          "source": "S164",
+          "clause": "附件1：按月换算后的综合所得税率表"
+        },
+        "status": "已核对"
+      },
+      {
+        "lower": 80000,
+        "upper": null,
+        "rate": "0.45",
+        "quick_deduction": 15160,
+        "ref": {
+          "source": "S164",
+          "clause": "附件1：按月换算后的综合所得税率表"
+        },
+        "status": "已核对"
+      }
+    ]
+  },
+  "bonus": {
+    "separate_tax_policy": {
+      "value": "单独计税与并入综合所得可择优；按 164 号第一条（一）单独计税执行至 2021-12-31",
+      "valid_from": "2019-01-01",
+      "valid_until": "2021-12-31",
+      "ref": {
+        "source": "S164",
+        "clause": "第一条（一）"
+      },
+      "status": "已核对"
+    },
+    "monthly_divisor": {
+      "value": 12,
+      "ref": {
+        "source": "S164",
+        "clause": "第一条（一）（以全年一次性奖金收入除以12个月得到的数额查表）"
+      },
+      "status": "已核对"
+    }
+  },
+  "special_deductions": {
+    "housing_loan_vs_rent": "mutually_exclusive",
+    "child_education": {
+      "monthly_per_child": {
+        "value": 1000,
+        "ref": {
+          "source": "S41",
+          "clause": "第五条第一款（每个子女每月1000元）"
+        },
+        "status": "已核对"
+      },
+      "scope": {
+        "desc": "学前教育（年满3岁至小学入学前）至全日制学历教育，按每孩计算",
+        "ref": {
+          "source": "S41",
+          "clause": "第五条"
+        },
+        "status": "已核对"
+      },
+      "split_mode": {
+        "desc": "父母一方按扣除标准的100%扣除，或双方各按50%扣除；一个纳税年度内不能变更",
+        "ref": {
+          "source": "S41",
+          "clause": "第六条"
+        },
+        "status": "已核对"
+      }
+    },
+    "continue_education": {
+      "academic_monthly": {
+        "value": 400,
+        "ref": {
+          "source": "S41",
+          "clause": "第八条（学历（学位）继续教育每月400元）"
+        },
+        "status": "已核对"
+      },
+      "academic_max_months": {
+        "value": 48,
+        "ref": {
+          "source": "S41",
+          "clause": "第八条（同一学历（学位）扣除期限不超过48个月）"
+        },
+        "status": "已核对"
+      },
+      "vocational_annual": {
+        "value": 3600,
+        "ref": {
+          "source": "S41",
+          "clause": "第八条（职业资格继续教育取得证书当年3600元）"
+        },
+        "status": "已核对"
+      }
+    },
+    "serious_illness": {
+      "claimable_stage": {
+        "desc": "仅年度汇算清缴时扣除，预扣环节不可扣",
+        "ref": {
+          "source": "S41",
+          "clause": "第十一条（办理年度汇算清缴时据实扣除）"
+        },
+        "status": "已核对"
+      },
+      "deductible_threshold": {
+        "value": 15000,
+        "ref": {
+          "source": "S41",
+          "clause": "第十一条（医保目录范围内自付部分累计超过15000元）"
+        },
+        "status": "已核对"
+      },
+      "annual_cap": {
+        "value": 80000,
+        "ref": {
+          "source": "S41",
+          "clause": "第十一条（80000元限额内据实扣除）"
+        },
+        "status": "已核对"
+      }
+    },
+    "housing_loan": {
+      "monthly": {
+        "value": 1000,
+        "ref": {
+          "source": "S41",
+          "clause": "第十四条（首套住房贷款利息每月1000元）"
+        },
+        "status": "已核对"
+      },
+      "max_months": {
+        "value": 240,
+        "ref": {
+          "source": "S41",
+          "clause": "第十四条（扣除期限最长不超过240个月）"
+        },
+        "status": "已核对"
+      }
+    },
+    "housing_rent": {
+      "mutually_exclusive_with": {
+        "desc": "住房贷款利息：纳税人及其配偶一个纳税年度内不能同时分别享受",
+        "ref": {
+          "source": "S41",
+          "clause": "第二十条"
+        },
+        "status": "已核对"
+      },
+      "tiers": [
+        {
+          "tier": {
+            "desc": "直辖市、省会（首府）城市、计划单列市以及国务院确定的其他城市",
+            "ref": {
+              "source": "S41",
+              "clause": "第十七条（一）"
+            },
+            "status": "已核对"
+          },
+          "monthly": {
+            "value": 1500,
+            "ref": {
+              "source": "S41",
+              "clause": "第十七条（一）"
+            },
+            "status": "已核对"
+          }
+        },
+        {
+          "tier": {
+            "desc": "市辖区户籍人口超过100万的城市",
+            "ref": {
+              "source": "S41",
+              "clause": "第十七条（二）"
+            },
+            "status": "已核对"
+          },
+          "monthly": {
+            "value": 1100,
+            "ref": {
+              "source": "S41",
+              "clause": "第十七条（二）"
+            },
+            "status": "已核对"
+          }
+        },
+        {
+          "tier": {
+            "desc": "市辖区户籍人口不超过100万的城市",
+            "ref": {
+              "source": "S41",
+              "clause": "第十七条（二）"
+            },
+            "status": "已核对"
+          },
+          "monthly": {
+            "value": 800,
+            "ref": {
+              "source": "S41",
+              "clause": "第十七条（二）"
+            },
+            "status": "已核对"
+          }
+        }
+      ]
+    },
+    "support_elderly": {
+      "only_child_monthly": {
+        "value": 2000,
+        "ref": {
+          "source": "S41",
+          "clause": "第二十二条（一）（独生子女每月2000元）"
+        },
+        "status": "已核对"
+      },
+      "shared_total_cap": {
+        "value": 2000,
+        "ref": {
+          "source": "S41",
+          "clause": "第二十二条（二）（分摊每月2000元的扣除额度）"
+        },
+        "status": "已核对"
+      },
+      "shared_per_child_cap": {
+        "value": 1000,
+        "ref": {
+          "source": "S41",
+          "clause": "第二十二条（二）（每人不超过每月1000元）"
+        },
+        "status": "已核对"
+      },
+      "shared_mode": {
+        "desc": "由赡养人均摊或约定分摊，也可由被赡养人指定分摊；约定或指定分摊须签订书面分摊协议，指定分摊优先于约定分摊",
+        "ref": {
+          "source": "S41",
+          "clause": "第二十二条（二）"
+        },
+        "status": "已核对"
+      }
+    }
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "notes": "算例真值库（FR-7）：每条 = 输入参数 + 期望输出集 + 来源。期望值全部由 data/rules 规则包同源的官方文件数值手工推导（推导式见各条 note），M2 引擎以独立实现路径对账。金额/税率一律 Decimal 字符串（两位小数），计数用整数。查表商数口径：年终奖除以12的商数按 Decimal ROUND_HALF_UP 保留两位小数查表（只用于定档，税基仍用奖金全额）。真值语义：expected 为主期望；同一输入隐含的中间量记 also_expect，评测按全部非 pass 字段集合对账。",
+  "cases": [
+    {
+      "id": "bonus-36000-2024",
+      "category": "bonus_separate",
+      "year": 2024,
+      "title": "全年一次性奖金 36000 元单独计税（第一档）",
+      "input": {
+        "bonus_income": "36000.00",
+        "policy": "separate"
+      },
+      "expected": {
+        "divisor_quotient": "3000.00",
+        "rate": "0.03",
+        "quick_deduction": "0.00",
+        "tax": "1080.00"
+      },
+      "also_expect": {
+        "after_tax": "34920.00"
+      },
+      "source": {
+        "refs": ["S164", "S30"],
+        "urls": [
+          "https://www.gov.cn/zhengce/zhengceku/2018-12/31/content_5440172.htm",
+          "https://www.gov.cn/zhengce/zhengceku/202308/content_6900595.htm"
+        ],
+        "note": "推导：36000÷12=3000.00，查164号附件1月度税率表第一级（不超过3000元，3%、速算扣除数0），应纳税额=36000×0.03−0=1080.00；2024年单独计税政策有效（30号公告，执行至2027-12-31）"
+      }
+    },
+    {
+      "id": "bonus-36001-2024",
+      "category": "bonus_separate",
+      "year": 2024,
+      "title": "全年一次性奖金 36001 元单独计税（跳档临界陷阱）",
+      "input": {
+        "bonus_income": "36001.00",
+        "policy": "separate"
+      },
+      "expected": {
+        "divisor_quotient": "3000.08",
+        "rate": "0.10",
+        "quick_deduction": "210.00",
+        "tax": "3390.10"
+      },
+      "also_expect": {
+        "extra_tax_vs_bonus_36000": "2310.10",
+        "after_tax": "32610.90"
+      },
+      "source": {
+        "refs": ["S164", "S30"],
+        "urls": [
+          "https://www.gov.cn/zhengce/zhengceku/2018-12/31/content_5440172.htm",
+          "https://www.gov.cn/zhengce/zhengceku/202308/content_6900595.htm"
+        ],
+        "note": "推导：36001÷12=3000.0833…→3000.08（ROUND_HALF_UP 两位），落在第二级（超过3000元至12000元，10%、速算扣除数210），应纳税额=36001×0.10−210=3390.10；与 36000 元算例对比多发 1 元多缴税 2310.10 元（临界陷阱锚点，M4 边界扫描基准用）"
+      }
+    },
+    {
+      "id": "withholding-3months-2019",
+      "category": "withholding_cumulative",
+      "year": 2019,
+      "title": "累计预扣法：2019 年 1-3 月每月工资 10000 元、三险一金 2000 元",
+      "input": {
+        "monthly_gross": "10000.00",
+        "monthly_social_insurance": "2000.00",
+        "monthly_special_additional": "0.00",
+        "monthly_other_deductions": "0.00",
+        "months": 3
+      },
+      "expected": {
+        "cumulative_taxable": ["3000.00", "6000.00", "9000.00"],
+        "cumulative_tax": ["90.00", "180.00", "270.00"],
+        "monthly_tax": ["90.00", "90.00", "90.00"]
+      },
+      "also_expect": {
+        "cumulative_standard_deduction": ["5000.00", "10000.00", "15000.00"]
+      },
+      "source": {
+        "refs": ["S61", "SLAW"],
+        "urls": [
+          "https://fgk.chinatax.gov.cn/zcfgk/c100012/c5194838/content.html",
+          "https://guangdong.chinatax.gov.cn/gdsw/swsw_zcjd/2018-12/22/content_4cb227fcc958487eb23241abb49782a0.shtml",
+          "https://fgk.chinatax.gov.cn/zcfgk/c100009/c5193028/content.html"
+        ],
+        "note": "推导（61号公告第六条累计预扣法）：累计应纳税所得额=累计收入−累计减除费用(5000×m)−累计三险一金=(10000−5000−2000)×m=3000×m，各月均落在预扣率表一第一级（不超过36000元，3%），累计应预扣税额=3000×m×0.03，本期=当期累计−已预扣累计，逐月均为90.00"
+      }
+    },
+    {
+      "id": "settlement-2024",
+      "category": "annual_settlement",
+      "year": 2024,
+      "title": "年度汇算：年薪 200000 元、三险一金 40000 元、子女教育+赡养老人专项附加 60000 元",
+      "input": {
+        "annual_gross": "200000.00",
+        "annual_social_insurance": "40000.00",
+        "special_additional_detail": {
+          "child_education": "24000.00",
+          "support_elderly_only_child": "36000.00"
+        },
+        "annual_other_deductions": "0.00"
+      },
+      "expected": {
+        "comprehensive_taxable_income": "40000.00",
+        "annual_tax": "1480.00"
+      },
+      "also_expect": {
+        "standard_deduction_total": "60000.00",
+        "special_additional_total": "60000.00"
+      },
+      "source": {
+        "refs": ["SLAW", "S61", "S41", "S2023"],
+        "urls": [
+          "https://fgk.chinatax.gov.cn/zcfgk/c100009/c5193028/content.html",
+          "https://fgk.chinatax.gov.cn/zcfgk/c100012/c5194838/content.html",
+          "https://www.gov.cn/zhengce/zhengceku/2018-12/22/content_5351181.htm",
+          "https://www.gov.cn/zhengce/zhengceku/202308/content_6901207.htm"
+        ],
+        "note": "推导：应纳税所得额=200000−减除费用60000(5000×12)−三险一金40000−专项附加60000(子女教育2000×12+赡养老人独生3000×12，2023提标后标准)=40000，落在税率表一第二级（超过36000元至144000元，10%、速算扣除数2520），年应纳税额=40000×0.10−2520=1480.00"
+      }
+    }
+  ]
+}

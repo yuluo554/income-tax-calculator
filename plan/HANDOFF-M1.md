@@ -1,5 +1,6 @@
 # HANDOFF-M1（跨会话交接快照）
 
+> **【已过时，仅作历史】M1 已于 2026-10-07 收尾，续接请读 [HANDOFF-M2.md](HANDOFF-M2.md)。**
 > 用法：新会话启动提示词 `/goal 读取 "plan/HANDOFF-M1.md" 继续完成任务`（相对路径，从仓库根解析）。
 > 快照日期：2026-10-07。M0（计划+骨架）已完成，下一棒 = **M1 数据先行与规则包定稿**（任务清单见 [05-数据计划与里程碑.md](05-数据计划与里程碑.md) §二 M1）。
 
@@ -45,14 +46,14 @@
 - **git 提交邮箱**：本仓库已设 `git config user.email` = GitHub noreply（282769740+yuluo554@users.noreply.github.com）；**首提交 1481cc8 仍含个人 QQ 邮箱** → M6 发布前 env-filter 全历史改写（勿忘）；
 - `.gitignore` 的 `*.spec` 通配会在 M5 吞掉 PyInstaller spec → 届时加 `!tools/*.spec` 例外。
 
-## M1 DoD checklist
+## M1 DoD checklist（M1 收尾回写，2026-10-07）
 
-- [ ] 9 份规则包全部生成且 schema 测试通过（含跨年税率一致或分年基线）
-- [ ] `rules --year YYYY`（2019-2026 全部）显示 0 条待核对
-- [ ] 门控放行路径测试翻转成立（`test_gate_opens_when_all_verified` 用真实规则包验证）
-- [ ] 算例真值库 ≥3 条、逐条挂来源 URL，schema 测试通过
-- [ ] data/README.md 台账 + data/rules/README.md 年份覆盖表回写
-- [ ] 全量 pytest 全绿且收集数 ≥28（新增测试只增不减）；plan/00、05、06 状态回写
+- [x] 规则包全部生成且 schema 测试通过（含跨年税率一致）——**偏差说明：原计划"9 份"系笔误，2019-2026 实为 8 个纳税年度**，覆盖面以全年度为准（plan/06 已留痕）
+- [x] `rules --year YYYY`（2019-2026 全部）显示 0 条待核对（实测 rc=0）
+- [x] 门控放行路径测试翻转成立（`test_gate_opens_when_all_verified` 用真实规则包验证）
+- [x] 算例真值库 4 条（≥3 达标）、逐条挂来源 URL，schema 测试通过——偏差说明：61 号公告正文/解读经原文核对无数值算例，真值以"已核对官方文件数值+手工推导"构建（已查渠道记 data/README.md §三）
+- [x] data/README.md 台账 + data/rules/README.md 年份覆盖表回写
+- [x] 全量 pytest 全绿且收集数 39 ≥ 28（新增测试只增不减）；plan/00、05、06 状态回写
 
 ## 关键命令速查
 

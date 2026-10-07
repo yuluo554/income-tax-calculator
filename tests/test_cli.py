@@ -19,20 +19,20 @@ def test_rules_unknown_year_is_usage_error(capsys):
     assert "没有规则包" in capsys.readouterr().err
 
 
-def test_calc_blocked_by_gate_is_runtime_failure(capsys):
-    """2026 规则包含待核对条目 → 门控拦截 → 退出码 1 并列出待核对清单。"""
-    assert main(["calc", "--year", "2026"]) == 1
-    assert "待核对" in capsys.readouterr().err
+def test_calc_blocked_by_gate_is_runtime_failure(tmp_path, capsys):
+    """合成待核对规则包 → 门控拦截 → 退出码 1 并列出待核对清单。"""
+    from test_rules_loader import flip_one_node_pending, load_ruleset, write_ruleset
 
-
-def test_calc_stub_after_gate_passes(tmp_path, capsys):
-    """全核对规则包过门控后命中未实装桩 → 同为运行期失败 1。"""
-    from test_rules_loader import all_verified, load_ruleset, write_ruleset
-
-    raw = all_verified(load_ruleset(2026).data)
+    raw = flip_one_node_pending(load_ruleset(2026).data)
     data_dir = write_ruleset(tmp_path, raw, 2099)
     rc = main(["--data-dir", data_dir, "calc", "--year", "2099"])
     assert rc == 1
+    assert "待核对" in capsys.readouterr().err
+
+
+def test_calc_engine_stub_is_runtime_failure(capsys):
+    """M1 后真实规则包全部通过门控 → 命中引擎未实装桩 → 同为运行期失败 1。"""
+    assert main(["calc", "--year", "2026"]) == 1
     assert "尚未实装" in capsys.readouterr().err
 
 
