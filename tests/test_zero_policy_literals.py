@@ -1,9 +1,9 @@
-"""零政策数值字面量门禁（HANDOFF-M2 既定口径 4）。
+"""零政策数值字面量门禁（HANDOFF-M2 既定口径 4，M4 扩围）。
 
-引擎与 CLI 代码中不得出现任何规则包政策数值（税率级距/速算扣除数/扣除标准/临界端点）——
-全部数值必须查规则包。本测试把 2019-2026 全部规则包的数值条目与两张税率表数值
-收编为禁用 token（>=100 的整数、对应小数与原样税率串），对 src/incometax 的
-引擎与 CLI 源码做词边界扫描。
+引擎、CLI 与基准代码中不得出现任何规则包政策数值（税率级距/速算扣除数/扣除标准/
+临界端点）——全部数值必须查规则包。本测试把 2019-2026 全部规则包的数值条目与
+两张税率表数值收编为禁用 token（>=100 的整数、对应小数与原样税率串），对
+src/incometax 的引擎、CLI 与 benchmark/ 源码做词边界扫描。
 
 豁免口径：
 - < 100 的小数值不收编（如月份数 12 是日历常数、两位小数精度 0.01 是申报口径约定）；
@@ -17,7 +17,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_ROOT = REPO_ROOT / "src" / "incometax"
-SCAN_FILES = sorted((SRC_ROOT / "engine").glob("*.py")) + [SRC_ROOT / "cli.py"]
+SCAN_FILES = (
+    sorted((SRC_ROOT / "engine").glob("*.py"))
+    + sorted((SRC_ROOT / "benchmark").glob("*.py"))
+    + [SRC_ROOT / "cli.py"]
+)
 
 
 def _numeric_tokens(node):
@@ -58,8 +62,9 @@ def _match_pattern(token: str):
 
 
 def test_scan_files_exist():
-    assert len(SCAN_FILES) >= 7  # engine 6 模块 + cli.py
+    assert len(SCAN_FILES) >= 14  # engine 7 模块 + benchmark 8 模块 + cli.py
     assert (SRC_ROOT / "cli.py").exists()
+    assert (SRC_ROOT / "benchmark" / "runner.py").exists()
 
 
 def test_engine_and_cli_free_of_policy_literals():

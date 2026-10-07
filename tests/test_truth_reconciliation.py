@@ -2,6 +2,7 @@
 
 对账语义（plan/05 §1.2）：expected 为主期望 + also_expect 隐含中间量，
 按"全部非 pass 字段集"对账——引擎输出必须覆盖并逐一等于真值字段。
+flatten/键集对账语义已上收至 incometax.benchmark.cases（M4 基准共用同一实现）。
 真值由官方文件数值+手工推导构建（推导式见各条 note），引擎是独立实现路径；
 **不许改真值凑引擎答案**。
 """
@@ -12,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from incometax.benchmark.cases import flatten
 from incometax.engine.bonus import compute_bonus_separate_tax
 from incometax.engine.monthly import MonthInput, compute_monthly_withholding
 from incometax.engine.settlement import SettlementInput, compute_annual_settlement
@@ -22,20 +24,6 @@ TRUTH_FILE = REPO_ROOT / "data" / "truth" / "cases.json"
 
 TRUTH = json.loads(TRUTH_FILE.read_text(encoding="utf-8"))
 CASES = {c["id"]: c for c in TRUTH["cases"]}
-
-
-def flatten(node, prefix=""):
-    """把期望/实际值展平成 {路径: Decimal}（列表带下标路径），两侧同构对账。"""
-    out = {}
-    if isinstance(node, dict):
-        for key, value in node.items():
-            out.update(flatten(value, f"{prefix}.{key}" if prefix else key))
-    elif isinstance(node, list):
-        for i, value in enumerate(node):
-            out.update(flatten(value, f"{prefix}[{i}]"))
-    else:
-        out[prefix] = Decimal(node)
-    return out
 
 
 def check_case(case_id, actual_nested):

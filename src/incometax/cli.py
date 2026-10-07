@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from incometax import __version__
+from incometax.benchmark.runner import run_all
 from incometax.engine import bonus as bonus_engine
 from incometax.engine import deductions as deductions_engine
 from incometax.engine import monthly as monthly_engine
@@ -25,7 +26,7 @@ from incometax.engine import social as social_engine
 from incometax.engine.monthly import MONTHS_PER_YEAR, MonthInput
 from incometax.engine.report import money, render_ref, short_ref
 from incometax.rules import loader
-from incometax.rules.schema import to_decimal
+from incometax.rules.schema import RulesetSchemaError, to_decimal
 
 EXIT_OK = 0
 EXIT_RUNTIME = 1
@@ -68,6 +69,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_calc.set_defaults(func=cmd_calc)
 
+    p_bench = sub.add_parser(
+        "benchmark",
+        help="内置评测基准一条命令跑全：算例回归 + 税率级次临界 + 陷阱区间 + 扣除互斥组合",
+    )
+    p_bench.add_argument(
+        "--year",
+        type=int,
+        default=None,
+        help="陷阱区间穷举深扫的代表年度（缺省 = 最新可用年度）",
+    )
+    p_bench.set_defaults(func=cmd_benchmark)
+
     return parser
 
 
@@ -78,9 +91,8 @@ def _load_or_usage_error(year: int, data_dir):
         raise CliUsageError(str(exc))
     except loader.DataDirNotFoundError as exc:
         raise CliUsageError(str(exc))
-    except loader.RulesetSchemaError as exc:
+    except RulesetSchemaError as exc:
         raise CliUsageError(f"规则包 schema 非法（年度 {year}）：{exc}")
-
 
 def cmd_rules(args) -> int:
     ruleset = _load_or_usage_error(args.year, args.data_dir)
@@ -633,6 +645,39 @@ def cmd_calc(args) -> int:
     _print_legend(ruleset)
     print("免责声明：计算结果供参考，以税务机关核定为准；政策以发文机关正式文本为准。")
     return EXIT_OK
+
+
+def cmd_benchmark(args) -> int:
+    """内置评测基准一条命令跑全（M4）：达标 0 / 未达标或门控拦截 1 / 用法错误 2。"""
+    try:
+        report = run_all(data_dir=args.data_dir, focus_year=args.year)
+    except (
+        loader.RulesetNotFoundError,
+        loader.DataDirNotFoundError,
+        RulesetSchemaError,
+        FileNotFoundError,
+        ValueError,
+    ) as exc:
+        raise CliUsageError(str(exc))
+    except loader.RulesetNotEffective as exc:
+        raise RuntimeFailure(str(exc))
+
+    print(
+        f"== 内置评测基准（纯规则通路、零 API；覆盖年度 "
+        f"{report.years[0]}-{report.years[-1]}，穷举深扫代表年度 {report.focus_year}） =="
+    )
+    for metric in report.metrics:
+        mark = "[OK]" if metric.ok else "[!!]"
+        print(f"  {metric.title}：{metric.summary}（阈值：{metric.threshold}）{mark}")
+        for line in metric.failures[:10]:
+            print(f"    - {line}")
+        if len(metric.failures) > 10:
+            print(f"    ...共 {len(metric.failures)} 条失败明细")
+    overall = "[OK]" if report.all_ok else "[!!]"
+    verdict = "全部达标" if report.all_ok else "存在未达标项"
+    print(f"  基准结论：{report.total_checks} 项检查，{verdict} {overall}")
+    print("免责声明：基准仅验证引擎与规则包的自洽性，计算结果以税务机关核定为准。")
+    return EXIT_OK if report.all_ok else EXIT_RUNTIME
 
 
 def main(argv=None) -> int:
