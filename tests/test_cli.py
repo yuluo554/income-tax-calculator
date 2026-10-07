@@ -30,10 +30,101 @@ def test_calc_blocked_by_gate_is_runtime_failure(tmp_path, capsys):
     assert "待核对" in capsys.readouterr().err
 
 
-def test_calc_engine_stub_is_runtime_failure(capsys):
-    """M1 后真实规则包全部通过门控 → 命中引擎未实装桩 → 同为运行期失败 1。"""
-    assert main(["calc", "--year", "2026"]) == 1
-    assert "尚未实装" in capsys.readouterr().err
+def test_calc_without_input_is_usage_error(capsys):
+    """M2 calc 已实装：缺 --input → 用法错误 2（门控在前：未过门控仍为 1，见上）。"""
+    assert main(["calc", "--year", "2026"]) == 2
+    assert "--input" in capsys.readouterr().err
+
+
+def _write_input(tmp_path, payload) -> str:
+    import json
+
+    path = tmp_path / "calc_input.json"
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    return str(path)
+
+
+def test_calc_truth_withholding_case_success(tmp_path, capsys):
+    """真值 withholding-3months-2019 CLI 通路：退出码 0，逐月 90.00 + 汇算 + 依据。"""
+    path = _write_input(
+        tmp_path,
+        {
+            "uniform_month": {"gross": "10000.00", "special_deduction": "2000.00"},
+            "month_count": 3,
+        },
+    )
+    assert main(["calc", "--year", "2019", "--input", path]) == 0
+    out = capsys.readouterr().out
+    assert "累计预扣" in out
+    assert "90.00" in out and "270.00" in out
+    assert "年度汇算" in out
+    assert "S61" in out  # 减除费用与预扣率表依据
+    assert "免责声明" in out
+
+
+def test_calc_with_social_and_bonus(tmp_path, capsys):
+    """社保联动并入专项扣除 + 年终奖单独计税块，退出码 0。"""
+    path = _write_input(
+        tmp_path,
+        {
+            "uniform_month": {"gross": "10000.00"},
+            "month_count": 12,
+            "social": {
+                "base_input": "10000.00",
+                "base_lower": "4000.00",
+                "base_upper": "25000.00",
+                "rates": {"养老": "0.08", "医疗": "0.02", "公积金": "0.12"},
+            },
+            "bonus_income": "36000.00",
+        },
+    )
+    assert main(["calc", "--year", "2024", "--input", path]) == 0
+    out = capsys.readouterr().out
+    assert "社保公积金个人部分" in out
+    assert "2200.00" in out  # (800+200+1200)/月 计入专项扣除
+    assert "1080.00" in out  # 年终奖 36000×3%
+    assert "34920.00" in out  # 税后
+    assert "单独计税" in out
+
+
+def test_calc_settlement_explicit_override(tmp_path, capsys):
+    """settlement 覆盖字段：显式全年口径覆盖月度聚合（真值 settlement-2024）。"""
+    path = _write_input(
+        tmp_path,
+        {
+            "uniform_month": {"gross": "0.00"},
+            "month_count": 1,
+            "settlement": {
+                "annual_gross": "200000.00",
+                "annual_special_deduction": "40000.00",
+                "annual_special_additional_deduction": "60000.00",
+                "withheld_total": "0.00",
+            },
+        },
+    )
+    assert main(["calc", "--year", "2024", "--input", path]) == 0
+    out = capsys.readouterr().out
+    assert "40000.00" in out  # 应纳税所得额
+    assert "1480.00" in out  # 年应纳税额
+    assert "应补税额" in out  # 0 − 1480 = 应补 1480
+
+
+def test_calc_malformed_json_is_usage_error(tmp_path, capsys):
+    path = tmp_path / "bad.json"
+    path.write_text("{not json", encoding="utf-8")
+    assert main(["calc", "--year", "2026", "--input", str(path)]) == 2
+    assert "JSON" in capsys.readouterr().err
+
+
+def test_calc_unknown_field_is_usage_error(tmp_path, capsys):
+    path = _write_input(tmp_path, {"months": [{"gros": "10000.00"}]})
+    assert main(["calc", "--year", "2026", "--input", path]) == 2
+    assert "不认识的字段" in capsys.readouterr().err
+
+
+def test_calc_missing_input_file_is_usage_error(tmp_path, capsys):
+    assert main(["calc", "--year", "2026", "--input", str(tmp_path / "nope.json")]) == 2
+    assert "不存在" in capsys.readouterr().err
 
 
 def test_bad_data_dir_is_usage_error(tmp_path, capsys):

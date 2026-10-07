@@ -36,7 +36,9 @@ class RulesetSchemaError(Exception):
 
 @dataclass(frozen=True)
 class Bracket:
-    """税率表级次：[lower, upper)（元），末级 upper=None 表示上不封顶。"""
+    """税率表级次（元）：官方级距为上界闭区间——首级 [0, upper]、后续级 (lower, upper]，
+    即"不超过 upper / 超过 lower 至 upper"；末级 upper=None 表示上不封顶。
+    级距相接（lower=上一级 upper），查表语义见 engine/monthly.find_bracket。"""
 
     lower: Decimal
     upper: Optional[Decimal]
