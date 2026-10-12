@@ -1,8 +1,10 @@
 # 个人所得税联动计算器
 
-> ✅ **v0.5.0（M5 桌面交付完成）**：CLI + PySide6 桌面应用 + Windows exe（PyInstaller onedir）三形态齐备；规则包加载 + status 门控 + 计算引擎（累计预扣/社保联动/年度汇算/年终奖单独计税）+ 年终奖双方案择优与临界区间推导 + 七项专项附加扣除管理 + 内置评测基准（1184 项全达标）全部可用。下一站 M6 发布（见 [plan/](plan/00-README总览.md)）。
+> ✅ **v0.5.0（已发布）**：CLI + PySide6 桌面应用 + Windows exe（PyInstaller onedir）三形态齐备；规则包加载 + status 门控 + 计算引擎（累计预扣/社保联动/年度汇算/年终奖单独计税）+ 年终奖双方案择优与临界区间推导 + 七项专项附加扣除管理 + 内置评测基准（1184 项全达标）全部可用。发布物见 [Releases](https://github.com/yuluo554/income-tax-calculator/releases)。
 
 累计预扣法逐月计算 · 年终奖计税方式择优（含"多发一元、到手变少"临界区间警示）· 七项专项附加扣除管理 · 社保公积金联动 · 年度汇算——核心特色是 **2019-2026 年度版本化规则集**：切换年度即切换规则，每个结果数值旁挂政策文号与条款依据，全本地计算、零上传。
+
+![演示](docs/demo/演示.gif)
 
 > 🖥️ 桌面应用与设计说明见 [docs/技术报告.md](docs/技术报告.md)；演示截图与 GIF 见 [docs/demo/](docs/demo/)。
 
@@ -190,12 +192,23 @@ incometax benchmark        # --year 可指定陷阱区间穷举深扫的代表�
 └── tools/                 # 生成器/打包/验收/演示素材脚本
 ```
 
+## 下载即用（Windows exe）
+
+无需 Python：从 [Releases](https://github.com/yuluo554/income-tax-calculator/releases) 下载 `个人所得税联动计算器-vX.Y.Z-win64.zip`，解压到任意目录，运行其中的 `个人所得税联动计算器.exe` 即可（PyInstaller onedir 裸 zip，免安装；规则包与真值库已内嵌，全本地计算、零上传）。
+
 ## 限制
 
 - 首期仅覆盖工资薪金 + 全年一次性奖金 + 年度汇算简化口径；经营所得、股权激励、财产租赁转让等复杂所得类型不在范围内；
 - 不对接税务局接口、不做申报代办；
 - 社保公积金缴费基数上下限与费率因城市而异，全部由用户输入，规则包不存全国值；
 - 政策快照以规则包核对日期为准，年度间政策变化（如 2023 年专项附加扣除三项提标）通过切换年度规则包体现。
+
+## 已知环境问题
+
+- **打包产物**：PyInstaller onedir 裸 zip 解压后请整体保留目录结构（不要只拷 exe 单文件，运行期依赖与内嵌数据在目录内）；
+- **Python 3.8**：GUI 依赖 `PySide6 < 6.7`、打包依赖 `PyInstaller 5.x`（版本上限为新解释器实测约束，见 `pyproject.toml` 的 extras）；
+- **`py` 启动器**：Windows 的 `py` 可能绕过虚拟环境指向系统 Python；README 快速开始统一用 `python -m ...`（激活 venv 后 `python` 才指向 venv）；
+- **无显示服务器/CI**：GUI 测试默认以 `QT_QPA_PLATFORM=offscreen` 运行（`tests/conftest.py` 已在导入 PySide6 前兜底设置）。
 
 ## 免责声明
 

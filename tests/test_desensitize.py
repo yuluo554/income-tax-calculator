@@ -75,6 +75,27 @@ def test_ci_checkout_fetches_full_history():
         )
 
 
+def test_ci_workflow_is_valid_yaml():
+    """CI workflow 必须可解析且每个 job 有 runs-on/steps。
+
+    非法 YAML 不会报错，而是 GitHub 端**不建任何 job**（run 0 秒失败、jobs=0、
+    workflow 状态却仍显示 active）——只有真解析/真跑才暴露，故在测试期先拦。
+
+    pyyaml 已声明在 dev extra（CI 装 `.[dev,gui]`）；此处**直接导入不用
+    importorskip**——缺依赖必须硬失败，否则会静默跳过、退化成"绿但少跑"。
+    """
+    import yaml
+
+    workflow_path = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+    data = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+    assert isinstance(data, dict), "workflow 顶层不是映射"
+    jobs = data.get("jobs")
+    assert jobs, "workflow 未定义任何 job"
+    for name, job in jobs.items():
+        assert job.get("runs-on"), "job %s 缺 runs-on" % name
+        assert job.get("steps"), "job %s 缺 steps" % name
+
+
 def test_history_scan_channel_is_alive(audit):
     """机制探活（防静默空扫=假绿）：历史扫描通道必须真能检索到已知串。"""
     revs = subprocess.run(

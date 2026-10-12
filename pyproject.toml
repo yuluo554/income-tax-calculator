@@ -22,7 +22,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "pyyaml>=5"]
 # GUI 与打包依赖留 M5 实装；版本上限为老解释器实测约束（见 plan/03 选型表）
 gui = ["PySide6>=6.4,<6.7"]
 pkg = [
@@ -34,7 +34,9 @@ pkg = [
 incometax = "incometax.cli:main"
 
 [project.urls]
-# GitHub 仓库链接发布时补（plan/06 待定决策 #1）
+Homepage = "https://github.com/yuluo554/income-tax-calculator"
+Repository = "https://github.com/yuluo554/income-tax-calculator"
+Issues = "https://github.com/yuluo554/income-tax-calculator/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
