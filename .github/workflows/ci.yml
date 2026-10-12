@@ -22,6 +22,10 @@ jobs:
       PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 脱敏审计的历史扫描（tests/test_desensitize.py）依赖完整 git 历史；
+          # 默认浅克隆（fetch-depth: 1）会让该扫描静默退化为空跑。
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
