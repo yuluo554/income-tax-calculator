@@ -42,6 +42,8 @@ EMAIL_RE = re.compile(
     "[A-Za-z0-9._%+-]+" + _AT + "[A-Za-z0-9.-]+" + _BRE + _DOT + "[A-Za-z]{2,}"
 )
 NOREPLY_SUFFIX = _AT + "users" + _DOT + "noreply" + _DOT + "github" + _DOT + "com"
+# 发布固有公开元数据豁免：克隆 URL 必含账号名（HTTPS 与 SSH 两种形态均不计命中）。
+GITHUB_SSH_PREFIX = "git" + _AT + "github" + _DOT + "com"
 
 # 个人目录路径：Windows 盘符用户目录 / 类 Unix 用户目录
 USER_DIR_RE = re.compile(
@@ -130,8 +132,10 @@ def scan_text(text):
 
     for idx, line in enumerate(text.splitlines(), start=1):
         for match in EMAIL_RE.finditer(line):
-            if not match.group(0).endswith(NOREPLY_SUFFIX):
-                add_line("email", idx)
+            value = match.group(0)
+            if value.endswith(NOREPLY_SUFFIX) or value.startswith(GITHUB_SSH_PREFIX):
+                continue  # 发布固有公开元数据（noreply 邮箱 / 克隆 URL）
+            add_line("email", idx)
         if USER_DIR_RE.search(line):
             add_line("user-dir-path", idx)
         for marker in PERSONAL_MARKERS:
@@ -220,8 +224,9 @@ def run_history():
         for category, pattern in patterns:
             result = _git("grep", "-I", "-n", "-E", "-e", pattern, rev)
             for line in result.stdout.splitlines():
-                if category == "email" and NOREPLY_SUFFIX in line:
-                    continue
+                if category == "email":
+                    if NOREPLY_SUFFIX in line or GITHUB_SSH_PREFIX in line:
+                        continue  # 发布固有公开元数据（noreply / 克隆 URL）
                 parts = line.split(":", 2)
                 if len(parts) < 3:
                     continue
@@ -326,10 +331,14 @@ def selftest(stream):
         found = [cat for _, cat in scan_text(sample)]
         if expected not in found:
             failures.append("夹具未命中：期望 %s，实际 %s" % (expected, found))
-    # 阴性对照：GitHub noreply 不得判命中
-    noreply = "282769740+yuluo554" + NOREPLY_SUFFIX
-    if any(cat == "email" for _, cat in scan_text(noreply)):
-        failures.append("阴性对照失败：GitHub noreply 被误判为敏感邮箱")
+    # 阴性对照：GitHub noreply 与克隆 URL 不得判命中（发布固有公开元数据）
+    benign = [
+        "282769740+yuluo554" + NOREPLY_SUFFIX,
+        "git remote add origin " + GITHUB_SSH_PREFIX + ":yuluo554/income-tax-calculator.git",
+    ]
+    for sample in benign:
+        if any(cat == "email" for _, cat in scan_text(sample)):
+            failures.append("阴性对照失败：发布元数据被误判为敏感邮箱——%s" % sample.split(":")[0])
     if failures:
         for item in failures:
             stream.write("[selftest][FAIL] %s\n" % item)

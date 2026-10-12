@@ -63,9 +63,10 @@ HANDOFF 速查 1 处）；`plan/06` "系列第 N 题" 表述（前作均已公�
 | 产物 | 值 |
 |---|---|
 | zip | `个人所得税联动计算器-v0.5.0-win64.zip` |
-| 大小 | 41,272,858 字节（zip 179 条目，单顶层目录，无禁区成分） |
-| SHA256 | `2f8898131d8a1c36de84796906618ca0b53be6c766003ccc4c1ef6ec6d523e7a` |
+| 大小 | 41,272,855 字节（zip 179 条目，单顶层目录，无禁区成分） |
+| SHA256 | `3b34f338f3db2718a687771c23dbc3300278dd906e9aeb858db08eac07818136` |
 | 演示 | `docs/demo/演示.gif`（另附 5 张功能页 PNG） |
+| 产物基线 | 提交 `b0f066b`（含 CI 编码修复；重建前 sha256 `2f8898…3e7a` 作废） |
 
 **发布 zip 冻结态复验**：解压到中立目录（树外临时目录）→ `exe --selftest` 退出码 0，
 内嵌数据定位落解压目录内（非仓库）、calc 全链路、基准 1184 全达标、GUI offscreen 冒烟通过。
@@ -84,14 +85,31 @@ HANDOFF 速查 1 处）；`plan/06` "系列第 N 题" 表述（前作均已公�
 4. **M5 遗留：CI 未配 `fetch-depth: 0`**：默认浅克隆会让 CI 里的历史脱敏扫描退化为空跑；
    已补 `fetch-depth: 0` 并加守门断言 `test_ci_checkout_fetches_full_history`。
 
-## 六、建仓与 CI（待回填）
+## 六、建仓与 CI 首跑（实录）
 
-- [ ] `gh repo create`（不带 `--push`）
-- [ ] SSH push（token 无 workflow scope 的实录路径）
-- [ ] CI 首跑绿（push 数 = run 数对账；windows 3.8/3.12 + ubuntu 3.12）
-- [ ] tag `v0.5.0` + `gh release create` + topics
+- `gh repo create income-tax-calculator --public`（**不带 `--push`**）→ 成功
+- `git remote add origin git@github.com:yuluo554/income-tax-calculator.git` → `git push -u origin main`（**SSH 通路**）
+  - push 成功；CI workflow 被正常识别并触发（`gh api .../actions/workflows` 显示 `CI active`）——
+    SSH push 携带 workflow 文件，未受 token 缺 `workflow` scope 影响（本机 `gh` token scopes = `gist, read:org, repo`）
+- **CI 首跑（run 38270783646）三作业全红**，两处为真实环境差异（发布门实测抓出，非仓库逻辑缺陷）：
 
-## 七、待定决策清零
+| 失败面 | 现象 | 根因 | 处置 |
+|---|---|---|---|
+| windows × {3.8, 3.12} · Run benchmark | `UnicodeEncodeError: 'charmap' codec ...` | CI 管道 stdout 为 **cp1252**（本机开发用 `py -X utf8` 掩盖） | `cli.main` 入口 `_ensure_utf8_stdio`：按现编码探针决定是否切 UTF-8（cp936 中文控制台保持不动）；加回归测试 |
+| ubuntu × 3.12 · Run tests | `ImportError: libEGL.so.1: cannot open shared object file` | 裸 runner 缺 Qt 运行期系统库（offscreen 亦需加载） | CI 增 Linux 步骤安装 `libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1` |
+
+修复提交 `b0f066b` 推送后再跑（**第二轮 run 38271827840：三作业全绿** —— windows/3.8、windows/3.12、ubuntu/3.12），
+push 数 = run 数对账（2 次 push → 2 轮 CI，均触发）；pytest 本机 157 全绿（+1 回归测试）。
+**教训**：开发机 UTF-8 环境与中文控制台掩盖了编码缺口，只有陌生 CI 环境暴露——这正是干净环境/首跑门禁的价值。
+
+## 七、发布物（src 变更后已重建）
+
+> 说明：CI 修复改了 `src/incometax/cli.py`，按纪律 **改源码后必须重建产物**（冻结包内嵌运行时），
+> §四 的 sha256 已更新为重建后数值（旧值 `2f8898…3e7a` 作废）。
+
+重建后复验：`tools/verify_package.py` 中立目录自检通过 + 发布 zip 解压复验通过 + 产物本体扫描 0 命中。
+
+## 八、待定决策清零
 
 - #1 GitHub 仓库名：`income-tax-calculator`（发布用纯净名）
 - #4 是否投稿社区清单：不投稿
