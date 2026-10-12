@@ -262,3 +262,27 @@ def test_version_flag(capsys):
         main(["--version"])
     assert excinfo.value.code == 0
     assert __version__ in capsys.readouterr().out
+
+
+def test_cli_prints_cjk_under_non_utf8_console(monkeypatch):
+    """CI 首跑实录：stdout 为 cp1252（不含中文字形）时 benchmark 输出曾抛 UnicodeEncodeError。
+
+    main() 的 _ensure_utf8_stdio 应在现编码无法承载中文时切到 UTF-8；此处用 cp1252
+    管道复现，断言退出码 0 且内容可解回中文。
+    """
+    import io
+    import sys
+
+    buffer = io.BytesIO()
+    fake_stdout = io.TextIOWrapper(buffer, encoding="cp1252", errors="strict")
+    fake_stderr = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
+    monkeypatch.setattr(sys, "stdout", fake_stdout)
+    monkeypatch.setattr(sys, "stderr", fake_stderr)
+    try:
+        rc = main(["benchmark"])
+        fake_stdout.flush()
+    finally:
+        monkeypatch.undo()
+    assert rc == 0
+    decoded = buffer.getvalue().decode("utf-8")
+    assert "基准结论" in decoded

@@ -30,6 +30,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+      - name: Install Qt runtime libraries (Linux)
+        # PySide6 的 Qt 共享库在离线/裸 runner 上需要这些系统库（实测 ubuntu 首跑
+        # 缺 libEGL.so.1 导致 test_gui.py 收集期 ImportError）；offscreen 平台同样要加载。
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1
       - name: Install package with dev+gui extras
         run: |
           python -m pip install -U pip setuptools wheel

@@ -5,7 +5,8 @@
   1 = 运行期失败（status 门控拦截 / 计算期失败）
   2 = 用法与输入错误（参数缺失、输入 JSON 非法、年度无规则包、schema 非法、数据目录缺失）
 
-控制台兼容：输出只用 GBK 可编码字符（Windows cp936 控制台），状态标记用 ASCII。
+控制台兼容：main() 入口在现编码无法承载中文时把 stdio 切到 UTF-8（见 `_ensure_utf8_stdio`），
+故中文标题/依据在 cp936 控制台与 cp1252 管道下均不抛 UnicodeEncodeError；状态标记用 ASCII。
 """
 
 import argparse
@@ -615,7 +616,35 @@ def cmd_benchmark(args) -> int:
     return EXIT_OK if report.all_ok else EXIT_RUNTIME
 
 
+def _ensure_utf8_stdio() -> None:
+    """保证标准输出/错误能承载中文：现编码不行时切到 UTF-8。
+
+    输出含中文（标题、依据）。CI/重定向场景 stdout 可能是 cp1252 等不含中文字形的
+    编码，print 会抛 UnicodeEncodeError（实测 win CI 首跑即因此失败）。策略：先用
+    现编码试编一个中文探针——能过则**保持不动**（中文 Windows cp936 控制台照常正确
+    显示），不能过才 reconfigure 到 UTF-8。被测试捕获（capsys）替换过的对象无
+    reconfigure，静默跳过。
+    """
+    probe = "个人所得税"
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        encoding = getattr(stream, "encoding", None)
+        if encoding:
+            try:
+                probe.encode(encoding)
+                continue
+            except (UnicodeEncodeError, LookupError):
+                pass
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass
+
+
 def main(argv=None) -> int:
+    _ensure_utf8_stdio()
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
