@@ -33,6 +33,11 @@
 **干净环境 vs dev 收集数对账**：dev 156 = 干净 clone 156，逐项无缺失；无 `importorskip` 静默跳过
 （PyYAML 已进 dev extra，缺依赖会硬失败而非跳过）。
 
+> **计数演进说明（如实记录，不改早前数值）**：本节干净环境验证执行于 CI 修复**之前**，当时基线为
+> 156（M5 的 149 + M6 脱敏守门 7）。CI 首跑修复编码缺陷时新增 1 项回归测试
+> （`test_cli_prints_cjk_under_non_utf8_console`），末态基线为 **157**；发布后对 GitHub clone 的复验
+> 收集数 = 157 全绿（见 §九）。两处数值均为各自时点的真实记录。
+
 ## 三、脱敏审计（四步 + 产物本体扫描）
 
 审计器入仓：`tools/desensitize_audit.py`（`--selftest` 阳性/阴性对照、`--mode tracked|history|messages|dist|all`）。
