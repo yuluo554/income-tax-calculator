@@ -62,11 +62,17 @@ HANDOFF 速查 1 处）；`plan/06` "系列第 N 题" 表述（前作均已公�
 
 | 产物 | 值 |
 |---|---|
-| zip | `个人所得税联动计算器-v0.5.0-win64.zip` |
-| 大小 | 41,272,855 字节（zip 179 条目，单顶层目录，无禁区成分） |
-| SHA256 | `3b34f338f3db2718a687771c23dbc3300278dd906e9aeb858db08eac07818136` |
-| 演示 | `docs/demo/演示.gif`（另附 5 张功能页 PNG） |
+| Release | https://github.com/yuluo554/income-tax-calculator/releases/tag/v0.5.0 |
+| tag | annotated `v0.5.0`（指向发布留档提交） |
+| 附件 zip | `income-tax-calculator-v0.5.0-win64.zip`（41,272,855 字节） |
+| 附件 sha256 | `income-tax-calculator-v0.5.0-win64.zip.sha256`（105 字节） |
+| 附件演示 | `income-tax-calculator-demo.gif` |
+| SHA256（zip） | `3b34f338f3db2718a687771c23dbc3300278dd906e9aeb858db08eac07818136` |
 | 产物基线 | 提交 `b0f066b`（含 CI 编码修复；重建前 sha256 `2f8898…3e7a` 作废） |
+
+> **附件名一律 ASCII**（`income-tax-calculator-…`）：实测 `gh release create` 在 Git Bash 下
+> 会把中文文件名**剥成** `-v0.5.0-win64.zip`（丢前缀）与 `default.gif`（整名回退）——
+> 附件已上传但名不可读、README 链接对不上。故仓库内 exe/目录保留中文名，仅**发布附件**用 ASCII。
 
 **发布 zip 冻结态复验**：解压到中立目录（树外临时目录）→ `exe --selftest` 退出码 0，
 内嵌数据定位落解压目录内（非仓库）、calc 全链路、基准 1184 全达标、GUI offscreen 冒烟通过。
@@ -84,6 +90,11 @@ HANDOFF 速查 1 处）；`plan/06` "系列第 N 题" 表述（前作均已公�
    返回 0 行造成"全历史干净"假象；改为逐提交迭代，并加"检索通道探活"断言（连已知串都搜不到即硬失败）。
 4. **M5 遗留：CI 未配 `fetch-depth: 0`**：默认浅克隆会让 CI 里的历史脱敏扫描退化为空跑；
    已补 `fetch-depth: 0` 并加守门断言 `test_ci_checkout_fetches_full_history`。
+5. **`gh release create` 在 Git Bash 下剥中文附件名**：首发附件名变成 `-v0.5.0-win64.zip`（丢前缀）
+   与 `default.gif`（整名回退）——附件已上传但名不可读、README 链接对不上。处置：删除 release + tag，
+   附件改 ASCII 名（`income-tax-calculator-v0.5.0-win64.zip` / `income-tax-calculator-demo.gif`）重建；
+   仓库内 exe/目录仍保留中文名（中文文件名只在 gh CLI 传参环节丢失，不影响产物本体）。
+6. **CI 首跑红灯（非缺陷，如实记录）**：见 §六；修两处环境差异后第二轮起全绿。
 
 ## 六、建仓与 CI 首跑（实录）
 
@@ -113,3 +124,20 @@ push 数 = run 数对账（2 次 push → 2 轮 CI，均触发）；pytest 本�
 
 - #1 GitHub 仓库名：`income-tax-calculator`（发布用纯净名）
 - #4 是否投稿社区清单：不投稿
+
+## 九、发布后复核（对远端终态）
+
+| 检查 | 命令/方法 | 结果 |
+|---|---|---|
+| 远端全新 clone | `git clone git@github.com:yuluo554/income-tax-calculator.git` | ✅ 106 文件、tag `v0.5.0` 就位 |
+| 历史邮箱三扫（clone 内） | `git log --format=%ae\|%ce --all` | ✅ 唯一 noreply |
+| 全量测试（clone 内全新 venv） | `pytest` + `--collect-only` | ✅ 157 收集、全绿 |
+| 基准（clone 内） | `python -m incometax benchmark` | ✅ 1184 项全达标 |
+| 脱敏四扫（clone 内） | `tools/desensitize_audit.py --mode all` | ✅ 硬门 0 |
+| README 渲染 | `gh api .../readme -H Accept:…html` | ✅ 标题/表格×2/GIF/下载节/评测表均渲染 |
+| Release 附件下载 | HTTP 302→200 + `gh release download` | ✅ zip 41,272,855 字节，**sha256 与留档一致** |
+| **下载产物冻结态自检** | 解压远端下载的 zip → `exe --selftest` | ✅ 退出码 0，内嵌数据落解压目录、calc 全链路、基准 1184 达标、GUI 冒烟通过 |
+| 仓库元信息 | `gh repo view` | ✅ `PUBLIC`、MIT、topics 8 项、latestRelease = v0.5.0 |
+| CI 轮数对账 | `gh run list` | ✅ push 数 = run 数 |
+
+**结论**：远端终态 = 已验证的发布物基线（tag `v0.5.0` 指向发布留档提交；发布后回写以小提交跟进，不迁 tag）。

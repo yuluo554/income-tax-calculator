@@ -194,7 +194,7 @@ incometax benchmark        # --year 可指定陷阱区间穷举深扫的代表�
 
 ## 下载即用（Windows exe）
 
-无需 Python：从 [Releases](https://github.com/yuluo554/income-tax-calculator/releases) 下载 `个人所得税联动计算器-vX.Y.Z-win64.zip`，解压到任意目录，运行其中的 `个人所得税联动计算器.exe` 即可（PyInstaller onedir 裸 zip，免安装；规则包与真值库已内嵌，全本地计算、零上传）。
+无需 Python：从 [Releases](https://github.com/yuluo554/income-tax-calculator/releases) 下载 `income-tax-calculator-vX.Y.Z-win64.zip`，解压到任意目录，运行其中的 `个人所得税联动计算器.exe` 即可（PyInstaller onedir 裸 zip，免安装；规则包与真值库已内嵌，全本地计算、零上传）。
 
 ## 限制
 

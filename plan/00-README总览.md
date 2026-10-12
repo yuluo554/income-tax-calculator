@@ -4,7 +4,7 @@
 **方法论**：ai-tool-project-sprint（计算引擎+versioned ruleset+官方算例真值基准+离线交付）
 **项目系列**：①建造（已发布）②电力 ③医疗 ④招投标 ⑤食品 ⑥发票 ⑦简历 ⑧结构加固 ⑨钢结构 ⑩脚手架 → ⑪参考文献检查器 → ⑫本项目
 **命名约定**：本地目录以 `10-7`（2026-10-07）日期标签开头（用户指定）；GitHub 仓库名 **`income-tax-calculator`**（纯净名，2026-10-12 定稿）。
-**当前状态**：🔄 M6 脱敏发布收尾中——脱敏审计（四扫 0 硬门）+ 干净环境全链复现 + 发布物（v0.5.0 裸 zip，sha256 留档）均已就绪；pytest 156 全绿、benchmark 1184 项全达标；建仓/CI/Release 执行中，留档见 [RELEASE-M6.md](RELEASE-M6.md)。
+**当前状态**：✅ **M6 脱敏发布完成** — GitHub 公开仓库 [yuluo554/income-tax-calculator](https://github.com/yuluo554/income-tax-calculator)（PUBLIC / MIT / topics 8 项）+ Release [v0.5.0](https://github.com/yuluo554/income-tax-calculator/releases/tag/v0.5.0)（Windows 裸 zip + 演示 GIF，sha256 留档）+ CI 三作业全绿；pytest 157 全绿、benchmark 1184 项全达标、干净环境全链复现、脱敏四扫 0 硬门、下载产物冻结态自检通过。发布留档见 [RELEASE-M6.md](RELEASE-M6.md)，完结快照见 [HANDOFF-FINAL.md](HANDOFF-FINAL.md)。
 
 ## 文档索引
 
@@ -22,7 +22,8 @@
 | [HANDOFF-M4.md](HANDOFF-M4.md) | 跨会话交接快照（M3 已收尾，M4 待办/口径/命令速查，仅作历史） | ✅ 2026-10-07 |
 | [HANDOFF-M5.md](HANDOFF-M5.md) | 跨会话交接快照（M4 已收尾，M5 待办/口径/命令速查，仅作历史） | ✅ 2026-10-07 |
 | [HANDOFF-M6.md](HANDOFF-M6.md) | 跨会话交接快照（M5 已收尾，M6 待办/口径/命令速查） | ✅ 2026-10-07 |
-| [RELEASE-M6.md](RELEASE-M6.md) | M6 发布留档（干净环境验证 / 脱敏审计 / 发布物 sha256 / 瑕疵记录 / 建仓 CI） | 🔄 随发布回填 |
+| [RELEASE-M6.md](RELEASE-M6.md) | M6 发布留档（干净环境验证 / 脱敏审计 / 发布物 sha256 / 瑕疵记录 / 建仓 CI / 发布后复核） | ✅ 2026-10-12 |
+| [HANDOFF-FINAL.md](HANDOFF-FINAL.md) | 完结快照（末态基线 / 发布执行记录 / 复跑手册 / 遗留项） | ✅ 2026-10-12 |
 
 ## 决策记录
 
@@ -38,4 +39,4 @@
 | M3 | 择优与扣除：年终奖双方案+临界区间机制推导；七项专项附加规则 | ✅ 2026-10-07（择优/临界区间/七项扣除实装、CLI 演示、pytest 122 项全绿、真值 4 条 100%） |
 | M4 | 边界扫描基准：税率临界/陷阱区间/扣除组合自洽，指标进 README | ✅ 2026-10-07（benchmark 四类 runner + CLI 子命令、1184 项检查全达标、门禁扩围收编 benchmark/、pytest 129 项全绿） |
 | M5 | 桌面交付：PySide6 界面 + PyInstaller 打包 + 技术报告 | ✅ 2026-10-07（GUI 六面 + offscreen 测试常驻 + onedir exe 中立目录验收 + 技术报告三主题 + 演示素材，pytest 149 全绿） |
-| M6 | 脱敏发布 GitHub + Release（exe）+ 收尾固化 | 🔄 进行中（脱敏/干净环境/发布物就绪；建仓 CI Release 执行中） |
+| M6 | 脱敏发布 GitHub + Release（exe）+ 收尾固化 | ✅ 2026-10-12（脱敏四扫 0 硬门 + 干净环境全链 + 公开仓 + CI 绿 + Release v0.5.0 + plan 全量回写，pytest 157 全绿） |
