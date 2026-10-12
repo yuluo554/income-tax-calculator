@@ -11,7 +11,7 @@
 import argparse
 import json
 import sys
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -21,6 +21,7 @@ from incometax.benchmark.runner import run_all
 from incometax.engine import bonus as bonus_engine
 from incometax.engine import deductions as deductions_engine
 from incometax.engine import monthly as monthly_engine
+from incometax.engine import pipeline as pipeline_engine
 from incometax.engine import settlement as settlement_engine
 from incometax.engine import social as social_engine
 from incometax.engine.monthly import MONTHS_PER_YEAR, MonthInput
@@ -462,15 +463,7 @@ def _render_settlement(ruleset, report: settlement_engine.SettlementReport) -> N
     print(f"  减除费用依据：{render_ref(report.standard_deduction_ref, ruleset.data['sources'])}")
 
 
-CLAIM_LABELS = {
-    "child_education": "子女教育",
-    "infant_care": "3岁以下婴幼儿照护",
-    "continue_education": "继续教育",
-    "serious_illness": "大病医疗",
-    "housing_loan": "住房贷款利息",
-    "housing_rent": "住房租金",
-    "support_elderly": "赡养老人",
-}
+CLAIM_LABELS = deductions_engine.ITEM_LABELS  # 展示名单一来源在引擎层（GUI 共用）
 
 
 def _render_deductions(ruleset, report: deductions_engine.DeductionsReport) -> None:
@@ -554,94 +547,36 @@ def cmd_calc(args) -> int:
     if not args.input:
         raise CliUsageError("calc 需要 --input <计算输入JSON文件路径>（格式见 README「calc 输入格式」）")
     calc_input = _parse_calc_input(_read_calc_input(args.input))
+    request = pipeline_engine.CalcRequest(
+        months=tuple(calc_input.months),
+        social_params=calc_input.social_params,
+        claims=tuple(calc_input.claims),
+        bonus_income=calc_input.bonus_income,
+        settlement_overrides=calc_input.settlement_overrides,
+    )
 
     try:
-        social_report = None
-        months = list(calc_input.months)
-        if calc_input.social_params is not None:
-            base_input, rates, base_lower, base_upper = calc_input.social_params
-            social_report = social_engine.compute_social_insurance(
-                base_input, rates, base_lower, base_upper
-            )
-            months = [
-                replace(
-                    mi,
-                    special_deduction=mi.special_deduction + social_report.total,
-                    note="；".join(filter(None, [mi.note, social_report.source_note])),
-                )
-                for mi in months
-            ]
-
-        # 七项专项附加申报：先校验（违规整单拒绝 → 用法错误），再按 stage 分链
-        deductions_report = None
-        if calc_input.claims:
-            try:
-                deductions_report = deductions_engine.evaluate_claims(effective, calc_input.claims)
-            except deductions_engine.DeductionViolationError as exc:
-                raise CliUsageError(f"专项附加扣除申报校验未通过：{exc}")
-            affected_months = set()
-            for cr in deductions_report.claims:
-                if cr.monthly_amount <= 0:
-                    continue  # settlement_only / 年度定额项不进预扣链
-                for m in range(min(cr.months_claimed, len(months))):
-                    mi = months[m]
-                    months[m] = replace(
-                        mi,
-                        special_additional_deduction=mi.special_additional_deduction + cr.monthly_amount,
-                    )
-                    affected_months.add(m)
-            for m in affected_months:
-                mi = months[m]
-                months[m] = replace(
-                    mi,
-                    note="；".join(
-                        filter(None, [mi.note, "含专项附加扣除申报计入（清单见上方申报清单）"])
-                    ),
-                )
-
-        monthly_report = monthly_engine.compute_monthly_withholding(effective, months)
-
-        aggregates = {
-            "annual_gross": sum((mi.gross for mi in months), Decimal(0)),
-            "annual_special_deduction": sum((mi.special_deduction for mi in months), Decimal(0)),
-            "annual_special_additional_deduction": sum(
-                (mi.special_additional_deduction for mi in months), Decimal(0)
-            ),
-            "annual_other_deduction": sum((mi.other_deduction for mi in months), Decimal(0)),
-            "withheld_total": monthly_report.withheld_total,
-        }
-        if deductions_report is not None:
-            # settlement_only 项（大病医疗等）不在预扣链月度输入里，汇算链单独纳入
-            aggregates["annual_special_additional_deduction"] += (
-                deductions_report.settlement_only_annual_total
-            )
-        aggregates.update(calc_input.settlement_overrides)
-        settlement_report = settlement_engine.compute_annual_settlement(
-            effective, settlement_engine.SettlementInput(**aggregates)
-        )
-
-        bonus_report = bonus_comparison = None
-        trap_intervals: Optional[List[bonus_engine.BonusTrapInterval]] = None
-        active_trap = None
-        if calc_input.bonus_income is not None:
-            bonus_report = bonus_engine.compute_bonus_separate_tax(effective, calc_input.bonus_income)
-            bonus_comparison = bonus_engine.compare_bonus_schemes(
-                effective, calc_input.bonus_income, settlement_report
-            )
-            trap_intervals = bonus_engine.derive_bonus_trap_intervals(effective)
-            active_trap = bonus_engine.find_trap_interval(trap_intervals, calc_input.bonus_income)
+        result = pipeline_engine.compute_full_calc(effective, request)
+    except deductions_engine.DeductionViolationError as exc:
+        raise CliUsageError(f"专项附加扣除申报校验未通过：{exc}")
     except ValueError as exc:
         raise RuntimeFailure(f"计算失败：{exc}")
 
     print(f"个人所得税联动计算 —— {ruleset.year} 纳税年度")
-    if social_report is not None:
-        _render_social(social_report)
-    if deductions_report is not None:
-        _render_deductions(ruleset, deductions_report)
-    _render_monthly(ruleset, monthly_report)
-    _render_settlement(ruleset, settlement_report)
-    if bonus_report is not None:
-        _render_bonus(ruleset, bonus_report, bonus_comparison, trap_intervals, active_trap)
+    if result.social_report is not None:
+        _render_social(result.social_report)
+    if result.deductions_report is not None:
+        _render_deductions(ruleset, result.deductions_report)
+    _render_monthly(ruleset, result.monthly_report)
+    _render_settlement(ruleset, result.settlement_report)
+    if result.bonus_report is not None:
+        _render_bonus(
+            ruleset,
+            result.bonus_report,
+            result.bonus_comparison,
+            list(result.trap_intervals) if result.trap_intervals else None,
+            result.active_trap,
+        )
     _print_legend(ruleset)
     print("免责声明：计算结果供参考，以税务机关核定为准；政策以发文机关正式文本为准。")
     return EXIT_OK

@@ -42,6 +42,17 @@ KNOWN_ITEMS = (
 
 EDUCATION_KINDS = ("academic", "vocational")
 
+# 七项扣除项目的展示名（呈现层共用：CLI/GUI 渲染申报清单用；非政策数值）
+ITEM_LABELS = {
+    "child_education": "子女教育",
+    "infant_care": "3岁以下婴幼儿照护",
+    "continue_education": "继续教育",
+    "serious_illness": "大病医疗",
+    "housing_loan": "住房贷款利息",
+    "housing_rent": "住房租金",
+    "support_elderly": "赡养老人",
+}
+
 
 @dataclass(frozen=True)
 class Claim:

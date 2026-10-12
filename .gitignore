@@ -8,6 +8,8 @@ venv/
 build/
 dist/
 *.spec
+# PyInstaller spec 为 M5 交付产物，入仓（上方通配默认吞掉，此处例外放行）
+!tools/*.spec
 
 # 数据库与运行产物
 *.db

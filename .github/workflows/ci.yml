@@ -16,15 +16,21 @@ jobs:
           - { os: windows-latest, python: "3.12" }
           - { os: ubuntu-latest, python: "3.12" }
     runs-on: ${{ matrix.os }}
+    env:
+      # GUI 测试常驻 offscreen（无显示服务器也能跑；conftest.py 亦在导入 PySide6 前兜底设置）
+      QT_QPA_PLATFORM: offscreen
+      PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Install package with dev extras
+      - name: Install package with dev+gui extras
         run: |
           python -m pip install -U pip setuptools wheel
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[dev,gui]"
       - name: Run tests
         run: python -m pytest -q
+      - name: Run built-in benchmark
+        run: python -m incometax benchmark
