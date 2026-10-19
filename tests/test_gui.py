@@ -292,3 +292,29 @@ def test_selftest_runs_end_to_end(tmp_path, qapp):
 def test_app_display_name_finalized():
     # plan/06 决策 #2 定稿：应用显示名（GUI 标题/exe 名共用）
     assert APP_TITLE == "个人所得税联动计算器"
+
+
+def test_gui_ref_panel_shows_reviewed_at(qapp):
+    """依据面板来源图例显示核对日期（值来自 sources[]，不硬编码）。"""
+    from types import SimpleNamespace
+
+    from incometax.gui.ref_panel import RefPanel
+    from incometax.rules import load_ruleset
+
+    ruleset = load_ruleset(2026)
+    expected = ruleset.data["sources"][0]["reviewed_at"]
+    panel = RefPanel()
+    panel.show_result(
+        ruleset,
+        SimpleNamespace(
+            monthly_report=None,
+            settlement_report=None,
+            deductions_report=None,
+            bonus_report=None,
+            bonus_comparison=None,
+            trap_intervals=(),
+        ),
+    )
+    text = panel.browser.toPlainText()
+    assert "核对日期：" in text
+    assert expected in text

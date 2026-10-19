@@ -7,6 +7,7 @@
 """
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -19,6 +20,7 @@ VALID_STATUSES = (STATUS_VERIFIED, STATUS_PENDING)
 REQUIRED_TOP_KEYS = (
     "schema_version",
     "year",
+    "review",
     "notes",
     "sources",
     "withholding",
@@ -26,6 +28,8 @@ REQUIRED_TOP_KEYS = (
     "bonus",
     "special_deductions",
 )
+
+REVIEW_FIELDS = ("reviewed_at", "next_review", "basis_year", "carry_forward_years", "scope_note")
 
 RATE_TABLE_FIELDS = ("comprehensive_annual", "monthly_converted")
 
@@ -82,6 +86,45 @@ def normalize_status(node: Dict[str, Any]) -> str:
     if status not in VALID_STATUSES:
         raise RulesetSchemaError(f"非法 status {status!r}（允许：{VALID_STATUSES}）")
     return status
+
+
+def parse_iso_date(value: Any, where: str) -> date:
+    """严格解析 YYYY-MM-DD（拒绝 datetime、非补零日期与非法日历日期）。"""
+    if not isinstance(value, str):
+        raise RulesetSchemaError(f"{where}: 必须为 YYYY-MM-DD 字符串")
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError:
+        raise RulesetSchemaError(f"{where}: 日期格式非法 {value!r}（要求 YYYY-MM-DD）")
+    if parsed.isoformat() != value:
+        raise RulesetSchemaError(f"{where}: 日期格式非法 {value!r}（要求 YYYY-MM-DD）")
+    return parsed
+
+
+def _validate_review(raw: Dict[str, Any]) -> None:
+    """顶层 review：五个字段齐全、日期合法且 next_review 晚于 reviewed_at。"""
+    review = raw["review"]
+    if not isinstance(review, dict):
+        raise RulesetSchemaError("review 必须为对象")
+    for field in REVIEW_FIELDS:
+        if field not in review:
+            raise RulesetSchemaError(f"review 缺少字段 {field}")
+    reviewed_at = parse_iso_date(review["reviewed_at"], "review.reviewed_at")
+    next_review = parse_iso_date(review["next_review"], "review.next_review")
+    if next_review <= reviewed_at:
+        raise RulesetSchemaError(
+            f"review.next_review ({review['next_review']}) 必须晚于"
+            f" review.reviewed_at ({review['reviewed_at']})"
+        )
+    if not isinstance(review["basis_year"], int) or isinstance(review["basis_year"], bool):
+        raise RulesetSchemaError("review.basis_year 必须为整数")
+    carry = review["carry_forward_years"]
+    if not isinstance(carry, list) or any(
+        not isinstance(year, int) or isinstance(year, bool) for year in carry
+    ):
+        raise RulesetSchemaError("review.carry_forward_years 必须为整数列表")
+    if not isinstance(review["scope_note"], str) or not review["scope_note"].strip():
+        raise RulesetSchemaError("review.scope_note 必须为非空字符串")
 
 
 def _validate_value_nodes(raw: Dict[str, Any], problems: List[str]) -> None:
@@ -144,6 +187,7 @@ def validate_ruleset(raw: Dict[str, Any], expected_year: Optional[int] = None) -
         raise RulesetSchemaError("year 必须为整数")
     if expected_year is not None and raw["year"] != expected_year:
         raise RulesetSchemaError(f"文件内 year={raw['year']} 与请求年度 {expected_year} 不一致")
+    _validate_review(raw)
     if not isinstance(raw["sources"], list) or not raw["sources"]:
         raise RulesetSchemaError("sources 必须为非空数组")
     for i, src in enumerate(raw["sources"]):
@@ -151,6 +195,9 @@ def validate_ruleset(raw: Dict[str, Any], expected_year: Optional[int] = None) -
             raise RulesetSchemaError(f"sources[{i}]: 必须含 id 与 doc")
         if src.get("status") not in VALID_STATUSES:
             raise RulesetSchemaError(f"sources[{i}]: status 非法")
+        if "reviewed_at" not in src:
+            raise RulesetSchemaError(f"sources[{i}]: 缺少 reviewed_at（核对日期）")
+        parse_iso_date(src["reviewed_at"], f"sources[{i}].reviewed_at")
     rate_tables = raw["rate_tables"]
     if not isinstance(rate_tables, dict):
         raise RulesetSchemaError("rate_tables 必须为对象")

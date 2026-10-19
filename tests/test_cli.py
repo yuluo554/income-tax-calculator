@@ -14,6 +14,31 @@ def test_rules_reports_status(capsys):
     assert "免责声明" in out
 
 
+def test_cli_rules_prints_reviewed_at(capsys):
+    """rules 输出顶层核对日期（值来自规则包，不在 src 硬编码）。"""
+    from incometax.rules import load_ruleset
+
+    expected = load_ruleset(2026).data["review"]["reviewed_at"]
+    assert main(["rules", "--year", "2026"]) == 0
+    out = capsys.readouterr().out
+    assert "核对日期:" in out
+    assert expected in out
+
+
+def test_cli_calc_legend_prints_reviewed_at(tmp_path, capsys):
+    """calc 来源图例逐条显示来源核对日期。"""
+    from incometax.rules import load_ruleset
+
+    expected = load_ruleset(2026).data["sources"][0]["reviewed_at"]
+    path = _write_input(
+        tmp_path, {"uniform_month": {"gross": "0.00"}, "month_count": 1}
+    )
+    assert main(["calc", "--year", "2026", "--input", path]) == 0
+    out = capsys.readouterr().out
+    assert "核对日期:" in out
+    assert expected in out
+
+
 def test_rules_unknown_year_is_usage_error(capsys):
     assert main(["rules", "--year", "1999"]) == 2
     assert "没有规则包" in capsys.readouterr().err

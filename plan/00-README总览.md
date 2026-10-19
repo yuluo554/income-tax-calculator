@@ -4,7 +4,7 @@
 **方法论**：ai-tool-project-sprint（计算引擎+versioned ruleset+官方算例真值基准+离线交付）
 **项目系列**：①建造（已发布）②电力 ③医疗 ④招投标 ⑤食品 ⑥发票 ⑦简历 ⑧结构加固 ⑨钢结构 ⑩脚手架 → ⑪参考文献检查器 → ⑫本项目
 **命名约定**：本地目录以 `10-7`（2026-10-07）日期标签开头（用户指定）；GitHub 仓库名 **`income-tax-calculator`**（纯净名，2026-10-12 定稿）。
-**当前状态**：✅ **M6 脱敏发布完成** — GitHub 公开仓库 [yuluo554/income-tax-calculator](https://github.com/yuluo554/income-tax-calculator)（PUBLIC / MIT / topics 8 项）+ Release [v0.5.0](https://github.com/yuluo554/income-tax-calculator/releases/tag/v0.5.0)（Windows 裸 zip + 演示 GIF，sha256 留档）+ CI 三作业全绿；pytest 157 全绿、benchmark 1184 项全达标、干净环境全链复现、脱敏四扫 0 硬门、下载产物冻结态自检通过。发布留档见 [RELEASE-M6.md](RELEASE-M6.md)，完结快照见 [HANDOFF-FINAL.md](HANDOFF-FINAL.md)。
+**当前状态**：✅ **v0.6.0 二次迭代发布完成** — GitHub 公开仓库 [yuluo554/income-tax-calculator](https://github.com/yuluo554/income-tax-calculator)（PUBLIC / MIT / topics 8 项）+ Release [v0.6.0](https://github.com/yuluo554/income-tax-calculator/releases/tag/v0.6.0)（Windows 裸 zip + 演示 GIF，sha256 留档）+ CI 绿（windows/ubuntu × py3.12，含打包持续门禁 job）；pytest 165 全绿、benchmark 1184 项全达标、干净环境全链复现、脱敏四扫 0 硬门、冻结态自检通过。运行下限抬升至 Python 3.12（PySide6 6.12 / PyInstaller 6.22）；规则包新增复核元数据（`reviewed_at` / `next_review`，2024-2026 沿用 2023 标准）。发布留档见 [RELEASE-v0.6.0.md](RELEASE-v0.6.0.md)；上一版留档见 [RELEASE-M6.md](RELEASE-M6.md) 与 [HANDOFF-FINAL.md](HANDOFF-FINAL.md)。
 
 ## 文档索引
 

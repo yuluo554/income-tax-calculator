@@ -239,3 +239,68 @@ def test_schema_invalid_status_rejected(tmp_path):
     with pytest.raises(RulesetSchemaError) as excinfo:
         load_ruleset(2093, data_dir=write_ruleset(tmp_path, raw, 2093))
     assert "status" in str(excinfo.value)
+
+
+# ---------------------------------------------------------------------------
+# 复核元数据（reviewed_at / review 块）：D-2 A
+# ---------------------------------------------------------------------------
+
+REVIEW_FIELDS = ("reviewed_at", "next_review", "basis_year", "carry_forward_years", "scope_note")
+
+
+def _copy_ruleset(year: int):
+    return json.loads(json.dumps(load_ruleset(year).data, ensure_ascii=False, default=str))
+
+
+def test_all_sources_have_reviewed_at():
+    """8 份规则包的每个来源都带 YYYY-MM-DD 核对日期。"""
+    for year in ALL_YEARS:
+        for src in load_ruleset(year).data["sources"]:
+            assert "reviewed_at" in src, (year, src.get("id"))
+            assert len(src["reviewed_at"]) == 10
+            assert src["reviewed_at"][4] == "-" and src["reviewed_at"][7] == "-"
+
+
+def test_all_rulesets_have_review_block():
+    """8 份规则包顶层 review 五字段齐全，依据年度按政策链映射。"""
+    expected_basis = {**{y: 2019 for y in (2019, 2020, 2021)}, 2022: 2022}
+    expected_basis.update({y: 2023 for y in (2023, 2024, 2025, 2026)})
+    for year in ALL_YEARS:
+        review = load_ruleset(year).data["review"]
+        assert isinstance(review, dict)
+        for field in REVIEW_FIELDS:
+            assert field in review, (year, field)
+        assert review["basis_year"] == expected_basis[year]
+        assert isinstance(review["carry_forward_years"], list)
+        assert all(isinstance(y, int) and not isinstance(y, bool) for y in review["carry_forward_years"])
+    assert load_ruleset(2026).data["review"]["carry_forward_years"] == [2024, 2025, 2026]
+    assert load_ruleset(2022).data["review"]["carry_forward_years"] == []
+
+
+def test_review_dates_valid_and_ordered():
+    """日期可解析，且 next_review 严格晚于 reviewed_at；来源日期同格式。"""
+    from datetime import date
+
+    for year in ALL_YEARS:
+        review = load_ruleset(year).data["review"]
+        reviewed_at = date.fromisoformat(review["reviewed_at"])
+        next_review = date.fromisoformat(review["next_review"])
+        assert next_review > reviewed_at, year
+        for src in load_ruleset(year).data["sources"]:
+            date.fromisoformat(src["reviewed_at"])
+
+
+def test_schema_rejects_missing_reviewed_at(tmp_path):
+    raw = _copy_ruleset(2026)
+    raw["sources"][0].pop("reviewed_at")
+    with pytest.raises(RulesetSchemaError) as excinfo:
+        load_ruleset(2092, data_dir=write_ruleset(tmp_path, raw, 2092))
+    assert "reviewed_at" in str(excinfo.value)
+
+
+def test_schema_rejects_bad_next_review(tmp_path):
+    raw = _copy_ruleset(2026)
+    raw["review"]["next_review"] = raw["review"]["reviewed_at"]
+    with pytest.raises(RulesetSchemaError) as excinfo:
+        load_ruleset(2091, data_dir=write_ruleset(tmp_path, raw, 2091))
+    assert "next_review" in str(excinfo.value)

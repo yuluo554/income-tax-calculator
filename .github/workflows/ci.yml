@@ -12,7 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-latest, python: "3.8" }
           - { os: windows-latest, python: "3.12" }
           - { os: ubuntu-latest, python: "3.12" }
     runs-on: ${{ matrix.os }}
@@ -21,13 +20,13 @@ jobs:
       QT_QPA_PLATFORM: offscreen
       PYTHONDONTWRITEBYTECODE: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # 脱敏审计的历史扫描（tests/test_desensitize.py）依赖完整 git 历史；
           # 默认浅克隆（fetch-depth: 1）会让该扫描静默退化为空跑。
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
       - name: Install Qt runtime libraries (Linux)
@@ -42,6 +41,32 @@ jobs:
           python -m pip install -U pip setuptools wheel
           python -m pip install -e ".[dev,gui]"
       - name: Run tests
-        run: python -m pytest -q
+        run: python -m pytest -o addopts= -q
       - name: Run built-in benchmark
         run: python -m incometax benchmark
+
+  package:
+    name: package (windows-latest / py3.12)
+    needs: test
+    runs-on: windows-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # 打包后断言与冻结态验收依赖完整仓库内容与历史（脱敏扫描同样要求）。
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install package with dev+gui+pkg extras
+        run: |
+          python -m pip install -U pip setuptools wheel
+          python -m pip install -e ".[dev,gui,pkg]"
+      - name: Run tests
+        run: python -m pytest -o addopts= -q
+      - name: Build Windows package (onedir + post-build assertions)
+        run: python -X utf8 tools/build_package.py --clean-build
+      - name: Verify package in neutral directory (frozen self-test)
+        run: python -X utf8 tools/verify_package.py

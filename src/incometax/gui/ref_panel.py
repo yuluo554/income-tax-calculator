@@ -101,12 +101,18 @@ class RefPanel(QWidget):
             doc = str(src.get("doc", ""))
             url = str(src.get("url", "") or "")
             status = str(src.get("status", ""))
+            reviewed_at = str(src.get("reviewed_at", "") or "")
             note = str(src.get("note", "") or "")
+            tags = []
+            if status:
+                tags.append(f"核对状态：{status}")
+            if reviewed_at:
+                tags.append(f"核对日期：{reviewed_at}")
             line = f"<p><b>{src.get('id', '')}</b>：{doc}"
             if url:
                 line += f"<br/>&nbsp;&nbsp;&nbsp;&nbsp;{url}"
-            if status:
-                line += f"（核对状态：{status}）"
+            if tags:
+                line += f"（{'；'.join(tags)}）"
             if note:
                 line += f"<br/>&nbsp;&nbsp;&nbsp;&nbsp;{note}"
             legend.append(line + "</p>")

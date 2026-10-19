@@ -101,6 +101,13 @@ def cmd_rules(args) -> int:
     report = loader.status_report(ruleset)
     print(f"年度规则包 {ruleset.year}（schema v1）")
     print(f"文件：{ruleset.path}")
+    review = ruleset.data.get("review", {})
+    if review:
+        print(
+            f"核对日期:{review.get('reviewed_at', '')}；"
+            f"下次复核:{review.get('next_review', '')}"
+        )
+        print(f"依据年度:{review.get('basis_year', '')}；口径：{review.get('scope_note', '')}")
     for src in ruleset.data["sources"]:
         note = f"（{src['note']}）" if src.get("note") else ""
         print(f"  来源 {src['id']}：{src['doc']} [状态:{src['status']}]{note}")
@@ -393,7 +400,9 @@ def _print_legend(ruleset) -> None:
     print("依据来源（行内引用 = 来源ID·条款）：")
     for src in ruleset.data["sources"]:
         url = f"（{src['url']}）" if src.get("url") else ""
-        print(f"  {src['id']}：{src['doc']}{url}")
+        reviewed_at = src.get("reviewed_at")
+        date_note = f"（核对日期:{reviewed_at}）" if reviewed_at else ""
+        print(f"  {src['id']}：{src['doc']}{url}{date_note}")
 
 
 def _render_social(report: social_engine.SocialReport) -> None:

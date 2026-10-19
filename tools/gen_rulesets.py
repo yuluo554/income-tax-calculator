@@ -1,10 +1,12 @@
-"""年度规则包生成器（M1 定稿）：单模板参数化生成 2019-2026 共 9 份 ruleset-YYYY.json。
+"""年度规则包生成器（M1 定稿）：单模板参数化生成 2019-2026 共 8 份 ruleset-YYYY.json。
 
 纪律（ai-tool-project-sprint 阶段1 确定性生成）：
 - 固定输入、固定键序、无时间戳、无随机数——两次运行输出逐字节一致（守门测试
   tests/test_gen_rulesets.py::test_regeneration_byte_identical 锁定）；
 - 每条数值挂 ref（来源 id + 条款）+ status=已核对；条款与数值均按 2026-10-07
   官方原文逐字核对（原文快照存 data/knowledge/raw/，台账见 data/README.md）；
+- 顶层 review 块记录核对日期、下次复核与依据年度：2019/2022/2023 为逐字核对年，
+  其余年度沿用最近一次已核对原文（2024-2026 沿用 2023 标准，未取得逐年度新文件）；
 - 写入前对每份产物跑 schema 校验与 status 门控断言（0 条待核对）。
 
 年度差异点（核对定稿，plan/05 §1.1）：
@@ -38,6 +40,11 @@ except ImportError:  # 允许未安装包时从仓库根直接运行
 
 YEARS = tuple(range(2019, 2027))
 
+# 本轮复核口径（D-2 A）：2026-10-07 逐字核对；下次复核 2027-01-31。
+# 日期只出现在生成器/数据中，src 侧一律从规则包读取（零字面量门禁）。
+REVIEWED_AT = "2026-10-07"
+NEXT_REVIEW = "2027-01-31"
+
 VERIFIED = schema.STATUS_VERIFIED
 
 # 来源 id 与官方原文 URL（抓取快照存 data/knowledge/raw/，sha256 见 data/README.md）
@@ -45,41 +52,49 @@ SOURCES = {
     "S61": {
         "doc": "国家税务总局公告2018年第61号《个人所得税扣缴申报管理办法（试行）》",
         "url": "https://fgk.chinatax.gov.cn/zcfgk/c100012/c5194838/content.html",
+        "reviewed_at": REVIEWED_AT,
         "note": "累计预扣法公式、减除费用 5000 元/月、附件预扣率表一（速算扣除数）均已逐字核对",
     },
     "SLAW": {
         "doc": "中华人民共和国个人所得税法（2018年修正，2018-08-31）",
         "url": "https://fgk.chinatax.gov.cn/zcfgk/c100009/c5193028/content.html",
+        "reviewed_at": REVIEWED_AT,
         "note": "税率表一（综合所得适用）级距与税率按官方原文图逐字核对",
     },
     "S164": {
         "doc": "财税〔2018〕164号《关于个人所得税法修改后有关优惠政策衔接问题的通知》",
         "url": "https://www.gov.cn/zhengce/zhengceku/2018-12/31/content_5440172.htm",
+        "reviewed_at": REVIEWED_AT,
         "note": "第一条（一）年终奖除以12查月度税率表；附件1按月换算后的综合所得税率表已逐字核对",
     },
     "S42": {
         "doc": "财政部 税务总局公告2021年第42号《关于延续实施全年一次性奖金等个人所得税优惠政策的公告》",
         "url": "https://www.gov.cn/zhengce/zhengceku/2021-12/31/content_5665897.htm",
+        "reviewed_at": REVIEWED_AT,
         "note": "全年一次性奖金单独计税优惠政策执行期限延长至2023年12月31日，已逐字核对",
     },
     "S30": {
         "doc": "财政部 税务总局公告2023年第30号《关于延续实施全年一次性奖金个人所得税政策的公告》",
         "url": "https://www.gov.cn/zhengce/zhengceku/202308/content_6900595.htm",
+        "reviewed_at": REVIEWED_AT,
         "note": "单独计税延续、可选并入、执行至2027-12-31，已逐字核对",
     },
     "S41": {
         "doc": "国发〔2018〕41号《个人所得税专项附加扣除暂行办法》",
         "url": "https://www.gov.cn/zhengce/zhengceku/2018-12/22/content_5351181.htm",
+        "reviewed_at": REVIEWED_AT,
         "note": "七项扣除分档/互斥/分摊条款逐字核对；自2019-01-01施行（第三十二条）",
     },
     "S2022": {
         "doc": "国发〔2022〕8号《国务院关于设立3岁以下婴幼儿照护个人所得税专项附加扣除的通知》",
         "url": "https://www.gov.cn/zhengce/zhengceku/2022-03/28/content_5682013.htm",
+        "reviewed_at": REVIEWED_AT,
         "note": "每孩每月1000元、分摊方式、自2022年1月1日起实施，已逐字核对",
     },
     "S2023": {
         "doc": "国发〔2023〕13号《国务院关于提高个人所得税有关专项附加扣除标准的通知》",
         "url": "https://www.gov.cn/zhengce/zhengceku/202308/content_6901207.htm",
+        "reviewed_at": REVIEWED_AT,
         "note": "三项提标（婴幼儿2000/子女教育2000/赡养老人3000）自2023-01-01实施，已逐字核对",
     },
 }
@@ -185,6 +200,33 @@ def _year_notes(year):
         "子女教育2000、赡养老人3000（非独生分摊总额3000、每人上限1500）；"
         "年终奖单独计税执行至2027-12-31（财政部 税务总局公告2023年第30号）。"
     )
+
+
+def _review_block(year: int) -> dict:
+    """顶层复核元数据：核对日期 / 下次复核 / 依据年度与沿用范围（D-2 A）。"""
+    if year <= 2021:
+        return {
+            "reviewed_at": REVIEWED_AT,
+            "next_review": NEXT_REVIEW,
+            "basis_year": 2019,
+            "carry_forward_years": [2020, 2021],
+            "scope_note": "2019 官方原文逐字核对；2020-2021 沿用 2019 标准",
+        }
+    if year == 2022:
+        return {
+            "reviewed_at": REVIEWED_AT,
+            "next_review": NEXT_REVIEW,
+            "basis_year": 2022,
+            "carry_forward_years": [],
+            "scope_note": "2022 官方原文逐字核对（含婴幼儿照护设立）",
+        }
+    return {
+        "reviewed_at": REVIEWED_AT,
+        "next_review": NEXT_REVIEW,
+        "basis_year": 2023,
+        "carry_forward_years": [2024, 2025, 2026],
+        "scope_note": "2023 官方原文逐字核对；2024-2026 沿用 2023 标准，未取得逐年度新文件",
+    }
 
 
 def build_ruleset(year: int) -> dict:
@@ -356,12 +398,20 @@ def build_ruleset(year: int) -> dict:
     for sid in _year_source_ids(year):
         meta = SOURCES[sid]
         sources.append(
-            {"id": sid, "doc": meta["doc"], "url": meta["url"], "status": VERIFIED, "note": meta["note"]}
+            {
+                "id": sid,
+                "doc": meta["doc"],
+                "url": meta["url"],
+                "status": VERIFIED,
+                "reviewed_at": meta["reviewed_at"],
+                "note": meta["note"],
+            }
         )
 
     return {
         "schema_version": 1,
         "year": year,
+        "review": _review_block(year),
         "notes": _year_notes(year),
         "sources": sources,
         "withholding": {
